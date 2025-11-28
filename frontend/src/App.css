@@ -1,14 +1,10 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+#mainDiv {
+  display: flex;
+  padding: 60px;
+  font-family: Arial, sans-serif;
+  background-color:grey;
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.title {
+  color: #1e88e5;
 }

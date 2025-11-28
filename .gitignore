@@ -22,3 +22,4 @@ venv
 *.sln
 *.sw?
 .env
+*cache*
