@@ -1,0 +1,9 @@
+Ushikava pet-projects repo
+
+---
+
+To deploy:
+
+```
+/srv/ushikavapetproj/deploy.sh
+```

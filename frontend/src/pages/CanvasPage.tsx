@@ -1,19 +1,20 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Stage, Layer, Line, Image as KonvaImage, Rect, Transformer } from 'react-konva';
+import { Stage, Layer, Line, Image as KonvaImage, Rect, Transformer, Circle } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import Konva from 'konva';
 import {
   Box, AppBar, Toolbar, Typography, IconButton,
   Slider, Tooltip, Button, Divider,
   Paper, TextField, Select, MenuItem, Chip,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material';
 import { CssBaseline } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import {
-  Brush, OpenWith, Delete, CloudUpload, AutoFixHigh,
+  Brush, OpenWith, Delete, CloudUpload, Backspace,
   PanTool, Wallpaper, HideImage, GridOn, GridOff,
-  Chat, Casino, Send, Close, Add,
+  Chat, Casino, Send, Close, Add, ZoomOutMap, Logout,
 } from '@mui/icons-material';
 
 type Tool = 'draw' | 'erase' | 'select' | 'pan';
@@ -96,8 +97,9 @@ export default function CanvasPage() {
   // Chat & dice
   const [chatOpen, setChatOpen] = useState(false);
   const [diceOpen, setDiceOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const [diceList, setDiceList] = useState<number[]>([6]);
   const [addDiceSides, setAddDiceSides] = useState<number>(6);
 
@@ -107,6 +109,7 @@ export default function CanvasPage() {
   const currentLineRef = useRef<LineData | null>(null);
   const activeDrawLayerRef = useRef<Konva.Layer>(null);
   const activeKonvaLineRef = useRef<Konva.Line | null>(null);
+  const eraserCursorRef = useRef<Konva.Circle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
@@ -117,7 +120,7 @@ export default function CanvasPage() {
   const centered = useRef(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // ── Grid lines ───────────────────────────────────────────────────────────────
+  // Grid lines
 
   const gridLines = useMemo(() => {
     if (!showGrid) return { v: [] as number[][], h: [] as number[][] };
@@ -130,7 +133,7 @@ export default function CanvasPage() {
     return { v, h };
   }, [showGrid, gridSize, canvasSize]);
 
-  // ── Center stage helper ──────────────────────────────────────────────────────
+  // Center stage helper
 
   const centerStage = useCallback((cw: number, ch: number) => {
     const stage = stageRef.current;
@@ -382,11 +385,18 @@ export default function CanvasPage() {
   }, [tool, color, brushSize, getCanvasPos]);
 
   const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    if (!isDrawing.current) return;
     const stage = e.target.getStage();
     if (!stage) return;
     const pos = getCanvasPos(stage);
     if (!pos) return;
+
+    // Always update eraser cursor position
+    if (eraserCursorRef.current) {
+      eraserCursorRef.current.position(pos);
+      eraserCursorRef.current.getLayer()?.batchDraw();
+    }
+
+    if (!isDrawing.current) return;
     const kLine = activeKonvaLineRef.current;
     if (!kLine) return;
     const newPoints = [...kLine.points(), pos.x, pos.y];
@@ -540,9 +550,9 @@ export default function CanvasPage() {
   // ── Chat ─────────────────────────────────────────────────────────────────────
 
   const sendChatMessage = useCallback(() => {
-    const text = chatInput.trim();
+    const text = chatInputRef.current?.value.trim() ?? '';
     if (!text) return;
-    setChatInput('');
+    if (chatInputRef.current) chatInputRef.current.value = '';
     const localMsg: ChatMsg = {
       id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       user: nicknameRef.current,
@@ -552,7 +562,7 @@ export default function CanvasPage() {
     };
     setChatMessages(prev => [...prev, localMsg]);
     wsRef.current?.send(JSON.stringify({ type: 'chat_message', text }));
-  }, [chatInput]);
+  }, []);
 
   // ── Dice ─────────────────────────────────────────────────────────────────────
 
@@ -580,8 +590,8 @@ export default function CanvasPage() {
   const toolBtn = (t: Tool, icon: React.ReactNode, label: string) => (
     <Tooltip title={label} key={t}>
       <IconButton size="small" onClick={() => setTool(t)} sx={{
-        color: tool === t ? '#ffd740' : 'rgba(255,255,255,0.75)',
-        bgcolor: tool === t ? 'rgba(255,215,64,0.12)' : 'transparent',
+        color: tool === t ? '#2AABEE' : 'rgba(255,255,255,0.75)',
+        bgcolor: tool === t ? 'rgba(42,171,238,0.15)' : 'transparent',
         borderRadius: 1.5,
       }}>
         {icon}
@@ -589,8 +599,17 @@ export default function CanvasPage() {
     </Tooltip>
   );
 
+  const drawCursorSvg = encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+      <line x1="12" y1="2" x2="12" y2="22" stroke="black" stroke-width="2.5"/>
+      <line x1="2" y1="12" x2="22" y2="12" stroke="black" stroke-width="2.5"/>
+      <line x1="12" y1="2" x2="12" y2="22" stroke="white" stroke-width="1"/>
+      <line x1="2" y1="12" x2="22" y2="12" stroke="white" stroke-width="1"/>
+    </svg>
+  `);
   const cursorMap: Record<Tool, string> = {
-    draw: 'crosshair', erase: 'cell', select: 'default', pan: 'grab',
+    draw: `url("data:image/svg+xml,${drawCursorSvg}") 12 12, crosshair`,
+    erase: 'none', select: 'default', pan: 'grab',
   };
 
   const diceLabel = diceList.length === 0 ? '' :
@@ -604,14 +623,13 @@ export default function CanvasPage() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <AppBar position="static" sx={{ bgcolor: '#1a1a2e', flexShrink: 0 }}>
+        <AppBar position="static" sx={{
+          background: '#17212B',
+          flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+        }}>
           <Toolbar variant="dense" sx={{ gap: 0.5, minHeight: 52, px: 1 }}>
-            <Typography sx={{ mr: 1, fontWeight: 'bold', fontSize: 13, color: '#ffd740' }}>
-              {nickname}
-            </Typography>
-
-            {toolBtn('draw',   <Brush fontSize="small" />,      'Кисть')}
-            {toolBtn('erase',  <AutoFixHigh fontSize="small" />, 'Ластик')}
+            {toolBtn('draw',   <Brush fontSize="small" />,    'Кисть')}
+            {toolBtn('erase',  <Backspace fontSize="small" />, 'Ластик')}
             {toolBtn('select', <OpenWith fontSize="small" />,    'Двигать картинку')}
             {toolBtn('pan',    <PanTool fontSize="small" />,     'Двигать холст (или средняя кнопка мыши)')}
 
@@ -635,7 +653,7 @@ export default function CanvasPage() {
                 {brushSize}
               </Typography>
               <Slider value={brushSize} onChange={(_, v) => setBrushSize(v as number)} min={1} max={60}
-                sx={{ width: 75, color: '#ffd740', '& .MuiSlider-thumb': { width: 12, height: 12 } }} />
+                sx={{ width: 75, color: '#2AABEE', '& .MuiSlider-thumb': { width: 12, height: 12 } }} />
             </Box>
 
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, bgcolor: 'rgba(255,255,255,0.15)' }} />
@@ -643,8 +661,8 @@ export default function CanvasPage() {
             {/* Grid toggle */}
             <Tooltip title={showGrid ? 'Выключить сетку' : 'Включить сетку'}>
               <IconButton size="small" onClick={() => setShowGrid(v => !v)} sx={{
-                color: showGrid ? '#ffd740' : 'rgba(255,255,255,0.75)',
-                bgcolor: showGrid ? 'rgba(255,215,64,0.12)' : 'transparent',
+                color: showGrid ? '#2AABEE' : 'rgba(255,255,255,0.75)',
+                bgcolor: showGrid ? 'rgba(42,171,238,0.15)' : 'transparent',
                 borderRadius: 1.5,
               }}>
                 {showGrid ? <GridOff fontSize="small" /> : <GridOn fontSize="small" />}
@@ -657,7 +675,7 @@ export default function CanvasPage() {
                   {gridSize}px
                 </Typography>
                 <Slider value={gridSize} onChange={(_, v) => setGridSize(v as number)} min={20} max={500} step={10}
-                  sx={{ width: 70, color: '#ffd740', '& .MuiSlider-thumb': { width: 12, height: 12 } }} />
+                  sx={{ width: 70, color: '#2AABEE', '& .MuiSlider-thumb': { width: 12, height: 12 } }} />
               </Box>
             )}
 
@@ -666,10 +684,16 @@ export default function CanvasPage() {
             {/* Background */}
             <input ref={bgInputRef} type="file" accept="image/*" hidden onChange={handleBgUpload} />
             <Tooltip title={bgUrl ? `Сменить фон (${canvasSize.w}×${canvasSize.h})` : 'Установить фон — холст подстроится под размер картинки'}>
-              <IconButton size="small" onClick={() => bgInputRef.current?.click()}
-                sx={{ color: bgUrl ? '#69f0ae' : 'rgba(255,255,255,0.75)', borderRadius: 1.5 }}>
-                <Wallpaper fontSize="small" />
-              </IconButton>
+              <Button size="small" startIcon={<Wallpaper sx={{ fontSize: 15 }} />}
+                onClick={() => bgInputRef.current?.click()} variant="outlined"
+                sx={{
+                  color: bgUrl ? '#69f0ae' : 'white',
+                  borderColor: bgUrl ? 'rgba(105,240,174,0.5)' : 'rgba(255,255,255,0.35)',
+                  textTransform: 'none', fontSize: 12,
+                  '&:hover': { borderColor: bgUrl ? '#69f0ae' : 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}>
+                Фон
+              </Button>
             </Tooltip>
             {bgUrl && (
               <Tooltip title="Убрать фон (холст вернётся к 2000×2000)">
@@ -685,7 +709,11 @@ export default function CanvasPage() {
             <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageUpload} />
             <Button size="small" startIcon={<CloudUpload sx={{ fontSize: 15 }} />}
               onClick={() => fileInputRef.current?.click()} variant="outlined"
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: 12 }}>
+              sx={{
+                color: 'white', borderColor: 'rgba(255,255,255,0.35)',
+                textTransform: 'none', fontSize: 12,
+                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+              }}>
               Картинка
             </Button>
 
@@ -702,25 +730,37 @@ export default function CanvasPage() {
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, bgcolor: 'rgba(255,255,255,0.15)' }} />
 
             <Tooltip title="Сбросить масштаб и центрировать">
-              <Button size="small" onClick={resetView}
-                sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'none', fontSize: 11, minWidth: 32 }}>
-                1:1
+              <Button size="small" onClick={resetView} variant="outlined"
+                startIcon={<ZoomOutMap sx={{ fontSize: 15 }} />}
+                sx={{
+                  color: 'white', borderColor: 'rgba(255,255,255,0.35)',
+                  textTransform: 'none', fontSize: 12,
+                  '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}>
+                В начало
               </Button>
             </Tooltip>
 
-            <Tooltip title="Очистить холст для всех">
-              <IconButton size="small" onClick={handleClear} sx={{ color: '#ff5252' }}>
-                <Delete fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, bgcolor: 'rgba(255,255,255,0.15)' }} />
+
+            <Button size="small" variant="outlined"
+              startIcon={<Delete sx={{ fontSize: 15 }} />}
+              onClick={() => setClearConfirmOpen(true)}
+              sx={{
+                color: '#ff5252', borderColor: 'rgba(255,82,82,0.4)',
+                textTransform: 'none', fontSize: 12,
+                '&:hover': { borderColor: '#ff5252', bgcolor: 'rgba(255,82,82,0.1)' },
+              }}>
+              Очистить
+            </Button>
 
             <Box sx={{ flex: 1 }} />
 
             {/* Chat & Dice toggles */}
             <Tooltip title="Чат">
               <IconButton size="small" onClick={() => setChatOpen(v => !v)} sx={{
-                color: chatOpen ? '#ffd740' : 'rgba(255,255,255,0.75)',
-                bgcolor: chatOpen ? 'rgba(255,215,64,0.12)' : 'transparent',
+                color: chatOpen ? '#2AABEE' : 'rgba(255,255,255,0.75)',
+                bgcolor: chatOpen ? 'rgba(42,171,238,0.15)' : 'transparent',
                 borderRadius: 1.5,
               }}>
                 <Chat fontSize="small" />
@@ -728,19 +768,29 @@ export default function CanvasPage() {
             </Tooltip>
             <Tooltip title="Кубики">
               <IconButton size="small" onClick={() => setDiceOpen(v => !v)} sx={{
-                color: diceOpen ? '#ffd740' : 'rgba(255,255,255,0.75)',
-                bgcolor: diceOpen ? 'rgba(255,215,64,0.12)' : 'transparent',
+                color: diceOpen ? '#2AABEE' : 'rgba(255,255,255,0.75)',
+                bgcolor: diceOpen ? 'rgba(42,171,238,0.15)' : 'transparent',
                 borderRadius: 1.5,
               }}>
                 <Casino fontSize="small" />
               </IconButton>
             </Tooltip>
 
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', mx: 1, fontSize: 11 }}>
-              колёсико — зум • средняя кнопка — двигать
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, bgcolor: 'rgba(255,255,255,0.25)' }} />
+
+            <Typography sx={{ fontWeight: 'bold', fontSize: 13, color: 'white', mx: 0.5 }}>
+              {nickname}
             </Typography>
-            <Button size="small" onClick={() => { localStorage.removeItem('canvas_nickname'); navigate('/login'); }}
-              sx={{ color: 'rgba(255,255,255,0.45)', textTransform: 'none', fontSize: 12 }}>
+
+            <Button size="small" variant="contained" startIcon={<Logout sx={{ fontSize: 15 }} />}
+              onClick={() => { localStorage.removeItem('canvas_nickname'); navigate('/login'); }}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.15)', color: 'white',
+                textTransform: 'none', fontSize: 12, backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: 'rgba(255,82,82,0.7)', boxShadow: 'none', borderColor: 'transparent' },
+              }}>
               Выйти
             </Button>
           </Toolbar>
@@ -779,10 +829,10 @@ export default function CanvasPage() {
             {showGrid && (
               <Layer listening={false}>
                 {gridLines.v.map((pts, i) => (
-                  <Line key={`v${i}`} points={pts} stroke="rgba(0,0,0,0.15)" strokeWidth={1} listening={false} />
+                  <Line key={`v${i}`} points={pts} stroke="rgba(0,0,0,0.25)" strokeWidth={1.5} listening={false} />
                 ))}
                 {gridLines.h.map((pts, i) => (
-                  <Line key={`h${i}`} points={pts} stroke="rgba(0,0,0,0.15)" strokeWidth={1} listening={false} />
+                  <Line key={`h${i}`} points={pts} stroke="rgba(0,0,0,0.25)" strokeWidth={1.5} listening={false} />
                 ))}
               </Layer>
             )}
@@ -809,8 +859,8 @@ export default function CanvasPage() {
               />
             </Layer>
 
-            {/* Layer 5: permanent drawings */}
-            <Layer listening={false}>
+            {/* Layer 5: drawings — permanent lines + active stroke (same layer so destination-out works in real-time) */}
+            <Layer ref={activeDrawLayerRef} listening={false}>
               {lines.map(line => (
                 <Line
                   key={line.id} points={line.points} stroke={line.color}
@@ -821,8 +871,24 @@ export default function CanvasPage() {
               ))}
             </Layer>
 
-            {/* Layer 6: active drawing stroke — updated imperatively, no React re-renders */}
-            <Layer ref={activeDrawLayerRef} listening={false} />
+            {/* Layer 6: eraser cursor indicator */}
+            {tool === 'erase' && (
+              <Layer listening={false}>
+                <Circle
+                  ref={eraserCursorRef}
+                  x={-9999} y={-9999}
+                  radius={brushSize * 1.5}
+                  fill="rgba(255,255,255,0.15)"
+                  stroke="white"
+                  strokeWidth={2}
+                  dash={[5, 4]}
+                  shadowColor="black"
+                  shadowBlur={4}
+                  shadowOpacity={0.8}
+                  listening={false}
+                />
+              </Layer>
+            )}
           </Stage>
 
           {/* ── Chat window ──────────────────────────────────────────────────── */}
@@ -831,11 +897,11 @@ export default function CanvasPage() {
               position: 'absolute', bottom: 8, right: 8,
               width: 300, height: 420,
               display: 'flex', flexDirection: 'column',
-              bgcolor: '#1e1e2e', color: 'white', borderRadius: 2, overflow: 'hidden',
+              bgcolor: '#17212B', color: 'white', borderRadius: 2, overflow: 'hidden',
               zIndex: 10,
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.75, bgcolor: '#2a2a3e', flexShrink: 0 }}>
-                <Chat sx={{ fontSize: 16, color: '#ffd740', mr: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.75, bgcolor: '#232E3C', flexShrink: 0 }}>
+                <Chat sx={{ fontSize: 16, color: '#2AABEE', mr: 1 }} />
                 <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 'bold' }}>Чат</Typography>
                 <IconButton size="small" onClick={() => setChatOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)', p: 0.25 }}>
                   <Close sx={{ fontSize: 16 }} />
@@ -845,7 +911,7 @@ export default function CanvasPage() {
               <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 {chatMessages.length === 0 && (
                   <Typography sx={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center', mt: 2 }}>
-                    Пока никто ничего не написал
+                    ...
                   </Typography>
                 )}
                 {chatMessages.map(m => (
@@ -855,7 +921,7 @@ export default function CanvasPage() {
                     </Typography>
                     <Typography component="span" sx={{
                       fontSize: 12, fontWeight: 'bold', mr: 0.5,
-                      color: m.msg_type === 'dice' ? '#ffd740' : '#69b4ff',
+                      color: m.msg_type === 'dice' ? '#2AABEE' : '#7ec8e3',
                     }}>
                       {m.user}:
                     </Typography>
@@ -867,11 +933,11 @@ export default function CanvasPage() {
                 <div ref={chatBottomRef} />
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 0.5, p: 1, bgcolor: '#2a2a3e', flexShrink: 0 }}>
+              <Box sx={{ display: 'flex', gap: 0.5, p: 1, bgcolor: '#232E3C', flexShrink: 0 }}>
                 <TextField
                   size="small" fullWidth
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
+                  inputRef={chatInputRef}
+                  defaultValue=""
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
                   }}
@@ -886,8 +952,8 @@ export default function CanvasPage() {
                     '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.3)', opacity: 1 },
                   }}
                 />
-                <IconButton size="small" onClick={sendChatMessage} disabled={!chatInput.trim()}
-                  sx={{ color: chatInput.trim() ? '#ffd740' : 'rgba(255,255,255,0.2)', flexShrink: 0 }}>
+                <IconButton size="small" onClick={sendChatMessage}
+                  sx={{ color: '#2AABEE', flexShrink: 0 }}>
                   <Send sx={{ fontSize: 18 }} />
                 </IconButton>
               </Box>
@@ -900,11 +966,11 @@ export default function CanvasPage() {
               position: 'absolute', bottom: 8, right: chatOpen ? 316 : 8,
               width: 260,
               display: 'flex', flexDirection: 'column',
-              bgcolor: '#1e1e2e', color: 'white', borderRadius: 2, overflow: 'hidden',
+              bgcolor: '#17212B', color: 'white', borderRadius: 2, overflow: 'hidden',
               zIndex: 10,
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.75, bgcolor: '#2a2a3e', flexShrink: 0 }}>
-                <Casino sx={{ fontSize: 16, color: '#ffd740', mr: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.75, bgcolor: '#232E3C', flexShrink: 0 }}>
+                <Casino sx={{ fontSize: 16, color: '#2AABEE', mr: 1 }} />
                 <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 'bold' }}>Кубики</Typography>
                 <IconButton size="small" onClick={() => setDiceOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)', p: 0.25 }}>
                   <Close sx={{ fontSize: 16 }} />
@@ -925,7 +991,7 @@ export default function CanvasPage() {
                       size="small"
                       onDelete={() => setDiceList(prev => prev.filter((_, i) => i !== idx))}
                       sx={{
-                        bgcolor: '#3a3a5e', color: '#ffd740', fontSize: 11,
+                        bgcolor: '#2E3C4E', color: '#2AABEE', fontSize: 11,
                         '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
                       }}
                     />
@@ -945,10 +1011,10 @@ export default function CanvasPage() {
                       '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.5)' },
                       '& .MuiSelect-select': { py: 0.75 },
                     }}
-                    MenuProps={{ PaperProps: { sx: { bgcolor: '#2a2a3e', color: 'white' } } }}
+                    MenuProps={{ PaperProps: { sx: { bgcolor: '#232E3C', color: 'white' } } }}
                   >
                     {DICE_SIDES.map(s => (
-                      <MenuItem key={s} value={s} sx={{ fontSize: 12, '&:hover': { bgcolor: '#3a3a5e' } }}>
+                      <MenuItem key={s} value={s} sx={{ fontSize: 12, '&:hover': { bgcolor: '#2E3C4E' } }}>
                         d{s}
                       </MenuItem>
                     ))}
@@ -975,8 +1041,8 @@ export default function CanvasPage() {
                   disabled={diceList.length === 0}
                   startIcon={<Casino />}
                   sx={{
-                    bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' },
-                    '&.Mui-disabled': { bgcolor: 'rgba(124,77,255,0.3)', color: 'rgba(255,255,255,0.3)' },
+                    bgcolor: '#2AABEE', '&:hover': { bgcolor: '#229ED9' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(42,171,238,0.25)', color: 'rgba(255,255,255,0.3)' },
                     textTransform: 'none', fontSize: 13,
                   }}
                 >
@@ -987,6 +1053,26 @@ export default function CanvasPage() {
           )}
         </Box>
       </Box>
+
+      <Dialog open={clearConfirmOpen} onClose={() => setClearConfirmOpen(false)}>
+        <DialogTitle>Очистить холст?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Все рисунки и изображения будут удалены для всех участников. Это действие нельзя отменить.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearConfirmOpen(false)}>Отмена</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => { setClearConfirmOpen(false); handleClear(); }}
+          >
+            Очистить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </ThemeProvider>
   );
 }

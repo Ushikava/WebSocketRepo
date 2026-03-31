@@ -1,5 +1,5 @@
 import { Box, Container, Typography, Paper, styled, Divider, Link, Button } from "@mui/material";
-import { Email, Phone, LocationOn, GitHub, Casino  } from "@mui/icons-material";
+import { Email, LocationOn, GitHub, Casino  } from "@mui/icons-material";
 import { keyframes } from "@mui/system";
 import { CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -74,7 +74,7 @@ function HomePage() {
                 onClick={() => navigate('/login')}
                 sx={{ bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' } }}
               >
-                Board games canvas (test)
+                Board games canvas
               </Button>
 
               <Divider sx={{ my: 3 }} />
@@ -82,9 +82,6 @@ function HomePage() {
               <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 3 }}>
                 <Link href="mailto:doni9791@gmail.com" color="inherit">
                   <Email fontSize="large" />
-                </Link>
-                <Link href="tel:+79149419190" color="inherit">
-                  <Phone fontSize="large" />
                 </Link>
                 <Link href="https://github.com/ushikava" target="_blank" color="inherit">
                   <GitHub fontSize="large" />

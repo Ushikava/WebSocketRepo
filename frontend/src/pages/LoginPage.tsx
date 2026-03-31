@@ -5,36 +5,36 @@ import { Brush } from '@mui/icons-material';
 import { CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
+const theme = createTheme({
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: { margin: 0, padding: 0 },
+        html: { margin: 0, padding: 0 },
+      },
+    },
+  },
+});
+
+const gradientAnimation = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
+const GradientBox = styled(Box)(({ theme }) => ({
+  background: "linear-gradient(-45deg, #b5ead7, #ffdac1, #e2f0cb, #ffb7b2)",
+  backgroundSize: "400% 400%",
+  animation: `${gradientAnimation} 20s ease infinite`,
+  padding: theme.spacing(4),
+  borderRadius: theme.shape.borderRadius,
+  textAlign: "center",
+  fontFamily: "Arial"
+}));
+
 function LoginPage() {
   const [nickname, setNickname] = useState('');
   const navigate = useNavigate();
-
-  const theme = createTheme({
-    components: {
-      MuiCssBaseline: {
-        styleOverrides: {
-          body: { margin: 0, padding: 0 },
-          html: { margin: 0, padding: 0 },
-        },
-      },
-    },
-  });
-
-  const gradientAnimation = keyframes`
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  `;
-
-  const GradientBox = styled(Box)(({ theme }) => ({
-    background: "linear-gradient(-45deg, #b5ead7, #ffdac1, #e2f0cb, #ffb7b2)",
-    backgroundSize: "400% 400%",
-    animation: `${gradientAnimation} 20s ease infinite`,
-    padding: theme.spacing(4),
-    borderRadius: theme.shape.borderRadius,
-    textAlign: "center",
-    fontFamily: "Arial"
-  }));
 
   const handleLogin = () => {
     const trimmed = nickname.trim();
