@@ -1,8 +1,20 @@
+import os
+import pathlib
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.router import router
-from .api.chat import chat
+from api.router import router as ping_router
+from api.canvas import router as canvas_router
+from db.session import engine
+from db.base import Base
+import models.canvas
+
+Base.metadata.create_all(bind=engine)
+
+UPLOADS_DIR = "uploads"
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 app = FastAPI(title="Ushikava Backend")
 
@@ -19,6 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(ping_router, prefix="/api")
+app.include_router(canvas_router, prefix="/api")
 
-app.include_router(router, prefix="/api")
-app.include_router(chat, prefix="/chat")
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+DIST_DIR = pathlib.Path(__file__).parent.parent.parent / "frontend" / "dist"
+app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="static")
