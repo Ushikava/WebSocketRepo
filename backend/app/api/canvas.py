@@ -73,6 +73,7 @@ async def get_state():
                     "y": i.y,
                     "width": i.width,
                     "height": i.height,
+                    "rotation": i.rotation or 0.0,
                 }
                 for i in images
             ],
@@ -196,7 +197,7 @@ async def ws_endpoint(nickname: str, websocket: WebSocket):
                     await manager.broadcast(msg, exclude=nickname)
 
                 elif msg_type == "transform_image":
-                    canvas_db.update_image_transform(db, msg["id"], msg["x"], msg["y"], msg["width"], msg["height"])
+                    canvas_db.update_image_transform(db, msg["id"], msg["x"], msg["y"], msg["width"], msg["height"], msg.get("rotation", 0.0))
                     await manager.broadcast(msg, exclude=nickname)
 
                 elif msg_type == "delete_image":

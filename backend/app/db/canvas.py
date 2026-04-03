@@ -52,6 +52,7 @@ def save_image(db: Session, img: dict):
         y=img["y"],
         width=img["width"],
         height=img["height"],
+        rotation=img.get("rotation", 0.0),
     )
     db.add(obj)
     db.commit()
@@ -65,13 +66,14 @@ def update_image_pos(db: Session, img_id: str, x: float, y: float):
         db.commit()
 
 
-def update_image_transform(db: Session, img_id: str, x: float, y: float, width: float, height: float):
+def update_image_transform(db: Session, img_id: str, x: float, y: float, width: float, height: float, rotation: float = 0.0):
     obj = db.query(CanvasImage).filter(CanvasImage.id == img_id).first()
     if obj:
         obj.x = x
         obj.y = y
         obj.width = width
         obj.height = height
+        obj.rotation = rotation
         db.commit()
 
 

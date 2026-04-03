@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Text, DateTime
+from sqlalchemy import Column, String, Float, Text, DateTime, Integer
 from datetime import datetime, timezone
 from db.base import Base
 
@@ -33,6 +33,7 @@ class CanvasImage(Base):
     y = Column(Float, default=80.0)
     width = Column(Float, nullable=False)
     height = Column(Float, nullable=False)
+    rotation = Column(Float, default=0.0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

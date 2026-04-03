@@ -1,14 +1,14 @@
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import CanvasPage from './pages/CanvasPage';
+import CanvasPage, { PopupProvider } from './pages/CanvasPage';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/canvas" element={<CanvasPage />} />
+      <Route path="/canvas" element={<PopupProvider><CanvasPage /></PopupProvider>} />
     </Routes>
   );
 }

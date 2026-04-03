@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stage, Layer, Line, Image as KonvaImage, Rect, Transformer, Circle } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -36,6 +36,7 @@ interface ImageItem {
   y: number;
   width: number;
   height: number;
+  rotation: number;
   image: HTMLImageElement;
 }
 
@@ -77,8 +78,53 @@ const formatTime = (ts: string) => {
   } catch { return ''; }
 };
 
+interface PopupContextType {
+  value: string | null
+  triggerPopup: (text: string) => void
+  clearPopup: () => void
+}
+
+const PopupContext = createContext<PopupContextType | null>(null)
+
+export const PopupProvider = ({ children }: { children: React.ReactNode }) => {
+  const [value, setValue] = useState<string | null>(null)
+  const triggerPopup = (text: string) => setValue(text)
+  const clearPopup = () => setValue(null)
+
+  return (
+    <PopupContext.Provider value={{ value, triggerPopup, clearPopup }}>
+      {children}
+    </PopupContext.Provider>
+  )
+}
+
+export const usePopup = () => useContext(PopupContext)
+
+const Popup = () => {
+  const ctx = usePopup()
+
+  useEffect(() => {
+    if (!ctx?.value) return
+    const timer = setTimeout(() => ctx.clearPopup(), 1500)
+    return () => clearTimeout(timer)
+  }, [ctx?.value])
+
+  if (!ctx?.value) return null
+
+  return (
+    <Box sx={{
+      position: 'fixed', bottom: 24, left: 24, zIndex: 9999,
+      bgcolor: '#1E2C3A', color: 'white', px: 2, py: 1,
+      borderRadius: 2, boxShadow: 3, fontSize: 14,
+    }}>
+      {ctx.value}
+    </Box>
+  )
+}
+
 export default function CanvasPage() {
   const navigate = useNavigate();
+  const popup = usePopup();
   const [nickname, setNickname] = useState('');
   const [tool, setTool] = useState<Tool>('draw');
   const [color, setColor] = useState('#000000');
@@ -202,7 +248,7 @@ export default function CanvasPage() {
       case 'transform_image':
         setImages(prev => prev.map(img =>
           img.id === msg.id
-            ? { ...img, x: msg.x, y: msg.y, width: msg.width, height: msg.height }
+            ? { ...img, x: msg.x, y: msg.y, width: msg.width, height: msg.height, rotation: msg.rotation ?? 0 }
             : img
         ));
         break;
@@ -518,15 +564,16 @@ export default function CanvasPage() {
     const newHeight = Math.max(10, node.height() * node.scaleY());
     const newX = node.x();
     const newY = node.y();
+    const newRotation = node.rotation();
     node.width(newWidth);
     node.height(newHeight);
     node.scaleX(1);
     node.scaleY(1);
     setImages(prev => prev.map(img =>
-      img.id === id ? { ...img, x: newX, y: newY, width: newWidth, height: newHeight } : img
+      img.id === id ? { ...img, x: newX, y: newY, width: newWidth, height: newHeight, rotation: newRotation } : img
     ));
     wsRef.current?.send(JSON.stringify({
-      type: 'transform_image', id, x: newX, y: newY, width: newWidth, height: newHeight,
+      type: 'transform_image', id, x: newX, y: newY, width: newWidth, height: newHeight, rotation: newRotation,
     }));
   }, []);
 
@@ -583,7 +630,8 @@ export default function CanvasPage() {
     };
     setChatMessages(prev => [...prev, localMsg]);
     wsRef.current?.send(JSON.stringify({ type: 'dice_roll', dice }));
-  }, [diceList]);
+    popup?.triggerPopup(`${nicknameRef.current} выбросил: ${total}`);
+  }, [diceList, popup]);
 
   // ── UI helpers ───────────────────────────────────────────────────────────────
 
@@ -842,7 +890,7 @@ export default function CanvasPage() {
               {images.map(img => (
                 <KonvaImage
                   key={img.id} id={img.id} image={img.image}
-                  x={img.x} y={img.y} width={img.width} height={img.height}
+                  x={img.x} y={img.y} width={img.width} height={img.height} rotation={img.rotation ?? 0}
                   draggable={tool === 'select'}
                   onClick={() => tool === 'select' && setSelectedImageId(img.id)}
                   onTap={() => tool === 'select' && setSelectedImageId(img.id)}
@@ -1072,6 +1120,8 @@ export default function CanvasPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Popup />
 
     </ThemeProvider>
   );
