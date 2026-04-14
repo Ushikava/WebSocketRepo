@@ -125,7 +125,7 @@ const Popup = () => {
 export default function CanvasPage() {
   const navigate = useNavigate();
   const popup = usePopup();
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState(() => localStorage.getItem('canvas_nickname') ?? '');
   const [tool, setTool] = useState<Tool>('draw');
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
@@ -165,6 +165,12 @@ export default function CanvasPage() {
   const panStart = useRef({ mx: 0, my: 0, sx: 0, sy: 0 });
   const centered = useRef(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // ── Guard: redirect to login if no nickname ──────────────────────────────────
+  if (!nickname) {
+    navigate('/login');
+    return null;
+  }
 
   // Grid lines
 
