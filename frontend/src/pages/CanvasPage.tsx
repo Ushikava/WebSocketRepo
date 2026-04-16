@@ -166,12 +166,6 @@ export default function CanvasPage() {
   const centered = useRef(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // ── Guard: redirect to login if no nickname ──────────────────────────────────
-  if (!nickname) {
-    navigate('/login');
-    return null;
-  }
-
   // Grid lines
 
   const gridLines = useMemo(() => {
@@ -799,11 +793,10 @@ export default function CanvasPage() {
 
             <Button size="small" variant="outlined"
               startIcon={<Delete sx={{ fontSize: 15 }} />}
-              onClick={() => setClearConfirmOpen(true)}
+              disabled
               sx={{
-                color: '#ff5252', borderColor: 'rgba(255,82,82,0.4)',
+                color: 'rgba(255,82,82,0.3)', borderColor: 'rgba(255,82,82,0.2)',
                 textTransform: 'none', fontSize: 12,
-                '&:hover': { borderColor: '#ff5252', bgcolor: 'rgba(255,82,82,0.1)' },
               }}>
               Очистить
             </Button>

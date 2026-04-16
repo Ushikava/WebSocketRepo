@@ -111,7 +111,6 @@ async def set_background(
 
     db = SessionLocal()
     try:
-        # Delete old background file if exists
         old = canvas_db.get_setting(db, "background_filename")
         if old:
             old_path = os.path.join(UPLOADS_DIR, old)
@@ -205,7 +204,6 @@ async def ws_endpoint(nickname: str, websocket: WebSocket):
                     await manager.broadcast(msg, exclude=nickname)
 
                 elif msg_type == "add_image":
-                    # Already saved via REST, just broadcast to others
                     await manager.broadcast(msg, exclude=nickname)
 
                 elif msg_type == "clear":
