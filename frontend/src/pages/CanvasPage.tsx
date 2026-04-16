@@ -845,7 +845,7 @@ export default function CanvasPage() {
 
         {/* Canvas container */}
         <Box ref={containerRef} sx={{
-          flex: 1, overflow: 'hidden', bgcolor: '#909090',
+          flex: 1, overflow: 'hidden', bgcolor: '#dcdcdc',
           cursor: cursorMap[tool], position: 'relative',
         }}>
           <Stage
