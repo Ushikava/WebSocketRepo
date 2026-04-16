@@ -1,5 +1,5 @@
 import { Box, Container, Typography, Paper, styled, Divider, Link, Button } from "@mui/material";
-import { Email, LocationOn, GitHub, Casino  } from "@mui/icons-material";
+import { Email, LocationOn, GitHub, Celebration } from "@mui/icons-material";
 import { keyframes } from "@mui/system";
 import { CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -70,11 +70,11 @@ function HomePage() {
 
               <Button
                 variant="contained"
-                startIcon={<Casino   />}
+                startIcon={<Celebration />}
                 onClick={() => navigate('/login')}
                 sx={{ bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' } }}
               >
-                Board games canvas
+                HAPPY BIRTHDAY BUTTON
               </Button>
 
               <Divider sx={{ my: 3 }} />
