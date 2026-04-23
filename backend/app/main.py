@@ -10,15 +10,8 @@ from pydantic import BaseModel
 
 from api.router import router as ping_router
 from api.canvas import router as canvas_router
-from api.video import router as videojam_router
+from api.video import router as uflow_router
 from api.auth import router as auth_router
-from db.session import engine
-from db.base import Base
-import models.canvas
-import models.user
-import models.video
-
-Base.metadata.create_all(bind=engine)
 
 UPLOADS_DIR = "uploads"
 VIDEOS_DIR = "videos"
@@ -43,7 +36,7 @@ app.add_middleware(
 
 app.include_router(ping_router, prefix="/api")
 app.include_router(canvas_router, prefix="/api")
-app.include_router(videojam_router, prefix="/api")
+app.include_router(uflow_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")

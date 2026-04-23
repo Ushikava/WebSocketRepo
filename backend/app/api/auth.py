@@ -43,7 +43,10 @@ def user_login(form_data: OAuth2PasswordRequestForm = Depends()):
         if not pwd_context.verify(form_data.password, existing_user.hashed_password):
             raise HTTPException(status_code=401, detail="Неверные учетные данные")
 
-        token = create_jwt_token({"sub": form_data.username})
+        token = create_jwt_token({
+                "sub": str(existing_user.id),
+                "username": existing_user.username,
+            })
         return {"access_token": token, "token_type": "bearer"}
 
     finally:

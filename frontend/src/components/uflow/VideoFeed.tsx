@@ -9,6 +9,7 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AuthPromptDialog from './AuthPromptDialog';
+import { useLanguage } from '../../i18n/LanguageContext';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
@@ -65,7 +66,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
       if (!viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
         viewCounted.current = true;
         sessionStorage.setItem(`viewed_${video.slug}`, '1');
-        fetch(`/api/ushikavamp4/video/${video.slug}/view`, { method: 'POST' }).catch(() => {});
+        fetch(`/api/uflow/video/${video.slug}/view`, { method: 'POST' }).catch(() => {});
       }
     } else {
       v.pause();
@@ -123,7 +124,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
     const optimisticLiked = !liked;
     setLiked(optimisticLiked);
     setLikesCount(c => optimisticLiked ? c + 1 : Math.max(0, c - 1));
-    fetch(`/api/ushikavamp4/video/${video.slug}/like`, {
+    fetch(`/api/uflow/video/${video.slug}/like`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -140,7 +141,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
         flexDirection: 'column',
         alignItems: 'center',
         py: 3,
-        borderBottom: '1px solid #EEECFF',
+        borderBottom: 1, borderColor: 'divider',
       }}
     >
       <Box sx={{ position: 'relative' }}>
@@ -217,24 +218,24 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
           <Box sx={{ minWidth: 0 }}>
             <Typography
               fontWeight="bold" fontSize={14} noWrap
-              onClick={() => navigate(`/ushikavamp4/video/${video.slug}`)}
+              onClick={() => navigate(`/uflow/video/${video.slug}`)}
               sx={{ cursor: 'pointer', '&:hover': { color: '#7C3AED', textDecoration: 'underline' } }}
             >
               {video.title}
             </Typography>
-            <Typography fontSize={12} color="#888">@{video.uploaded_by}</Typography>
+            <Typography fontSize={12} color="text.secondary">@{video.uploaded_by}</Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
             <VisibilityIcon sx={{ fontSize: 15, color: '#bbb' }} />
-            <Typography fontSize={12} color="#bbb" sx={{ mr: 0.5 }}>
+            <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
               {formatViews(video.views)}
             </Typography>
             <IconButton size="small" onClick={handleLike} sx={{ color: liked ? '#E91E63' : '#aaa', '&:hover': { color: '#E91E63' } }}>
               {liked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
             </IconButton>
             {likesCount > 0 && (
-              <Typography fontSize={12} color="#bbb" sx={{ mr: 0.5 }}>
+              <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
                 {formatViews(likesCount)}
               </Typography>
             )}
@@ -258,12 +259,14 @@ interface VideoFeedProps {
   hasMore: boolean;
   loading: boolean;
   onUploadClick: () => void;
+  resetKey: number;
 }
 
 function VideoFeed({
   videos, currentIndex, scrollTarget, onCurrentChange,
-  onLoadMore, hasMore, loading, onUploadClick,
+  onLoadMore, hasMore, loading, onUploadClick, resetKey,
 }: VideoFeedProps) {
+  const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const rafRef = useRef<number | null>(null);
@@ -295,6 +298,11 @@ function VideoFeed({
     rafRef.current = requestAnimationFrame(findMostVisible);
   }, [findMostVisible]);
 
+  // Scroll to top on tab switch (full reload)
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+  }, [resetKey]);
+
   // Scroll to item when VideoList is clicked
   useEffect(() => {
     if (!scrollTarget) return;
@@ -315,7 +323,7 @@ function VideoFeed({
 
   if (loading && videos.length === 0) {
     return (
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
         <CircularProgress sx={{ color: '#7C3AED' }} />
       </Box>
     );
@@ -323,13 +331,13 @@ function VideoFeed({
 
   if (!loading && videos.length === 0) {
     return (
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, bgcolor: 'background.default' }}>
         <VideoLibraryIcon sx={{ fontSize: 64, color: '#ccc' }} />
-        <Typography color="#aaa">No videos yet</Typography>
+        <Typography color="text.secondary">{t('noVideosYet')}</Typography>
         <Button variant="contained" onClick={onUploadClick}
           sx={{ background: 'linear-gradient(135deg, #7C3AED, #3B82F6)', borderRadius: 3, textTransform: 'none' }}
         >
-          Upload first video
+          {t('uploadFirstVideo')}
         </Button>
       </Box>
     );
@@ -339,7 +347,7 @@ function VideoFeed({
     <Box
       ref={scrollRef}
       onScroll={handleScroll}
-      sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
+      sx={{ flex: 1, minHeight: 0, overflowY: 'auto', bgcolor: 'background.default' }}
     >
       {videos.map((v, i) => (
         <FeedItem

@@ -80,7 +80,7 @@ function HomePage() {
 
                 <Button
                   variant="contained"
-                  onClick={() => navigate('/ushikavamp4/auth')}
+                  onClick={() => navigate('/uflow/auth')}
                   startIcon={<Casino />}
                   sx={{ bgcolor: '#ff4f1f', '&:hover': { bgcolor: '#e63900' } }}
                 >

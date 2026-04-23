@@ -26,10 +26,10 @@ def get_user_from_token(token: str = Depends(oauth2_scheme)):
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
+        return int(payload.get("sub"))
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Токен истёк")
-    except jwt.InvalidTokenError:
+    except (jwt.InvalidTokenError, ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Недействительный токен")
 
 def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
@@ -37,6 +37,6 @@ def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) ->
         return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
+        return int(payload.get("sub"))
     except Exception:
         return None

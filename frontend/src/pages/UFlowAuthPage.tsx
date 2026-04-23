@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import {
   Box, Paper, Typography, TextField, Button,
   Tabs, Tab, Alert, CircularProgress, styled, keyframes,
@@ -37,13 +38,14 @@ const GradientBox = styled(Box)(({ theme }) => ({
 
 type TabValue = 'login' | 'register';
 
-function VideoAuthPage() {
+function UFlowAuthPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabValue>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
   const handleLogin = async () => {
     setError('');
@@ -57,15 +59,15 @@ function VideoAuthPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || 'Ошибка входа');
+        setError(data.detail || t('loginError'));
         return;
       }
 
       localStorage.setItem('vj_token', data.access_token);
       localStorage.setItem('vj_username', username);
-      navigate('/ushikavamp4');
+      navigate('/uflow');
     } catch {
-      setError('Ошибка соединения с сервером');
+      setError(t('connectionError'));
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,7 @@ function VideoAuthPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || 'Ошибка регистрации');
+        setError(data.detail || t('registerError'));
         return;
       }
 
@@ -94,9 +96,9 @@ function VideoAuthPage() {
 
       localStorage.setItem('vj_token', loginData.access_token);
       localStorage.setItem('vj_username', username);
-      navigate('/ushikavamp4');
+      navigate('/uflow');
     } catch {
-      setError('Ошибка соединения с сервером');
+      setError(t('connectionError'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ function VideoAuthPage() {
           <PlayCircleFilledIcon sx={{ fontSize: 48, color: '#7c4dff', mb: 1 }} />
 
           <Typography variant="h5" fontWeight="bold" gutterBottom>
-            UshikavaMp4
+            UFlow
           </Typography>
 
           <Tabs
@@ -132,15 +134,15 @@ function VideoAuthPage() {
             centered
             sx={{ mb: 3, '& .MuiTabs-indicator': { backgroundColor: '#7c4dff' } }}
           >
-            <Tab label="Войти" value="login" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
-            <Tab label="Регистрация" value="register" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
+            <Tab label={t('loginTab')} value="login" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
+            <Tab label={t('registerTab')} value="register" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
           </Tabs>
 
           {error && <Alert severity="error" sx={{ mb: 2, textAlign: 'left' }}>{error}</Alert>}
 
           <TextField
             fullWidth
-            label="Имя пользователя"
+            label={t('username')}
             value={username}
             onChange={e => setUsername(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -149,7 +151,7 @@ function VideoAuthPage() {
           />
           <TextField
             fullWidth
-            label="Пароль"
+            label={t('password')}
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
@@ -167,7 +169,7 @@ function VideoAuthPage() {
           >
             {loading
               ? <CircularProgress size={24} color="inherit" />
-              : tab === 'login' ? 'Войти' : 'Зарегистрироваться'
+              : tab === 'login' ? t('loginButton') : t('registerButton')
             }
           </Button>
         </Paper>
@@ -176,4 +178,4 @@ function VideoAuthPage() {
   );
 }
 
-export default VideoAuthPage;
+export default UFlowAuthPage;

@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, Alert, LinearProgress, TextField,
@@ -12,6 +14,8 @@ interface UploadDialogProps {
 }
 
 function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
   const token = localStorage.getItem('vj_token');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -35,20 +39,18 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      const res = await fetch(`/api/ushikavamp4/video?title=${encodeURIComponent(title.trim())}`, {
+      const res = await fetch(`/api/uflow/video?title=${encodeURIComponent(title.trim())}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.detail || 'Upload error'); return; }
-      setSuccess(true);
-      setSelectedFile(null);
-      setTitle('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (!res.ok) { setError(data.detail || t('uploadError')); return; }
       onUploaded?.();
+      onClose();
+      navigate(`/uflow/video/${data.slug}`);
     } catch {
-      setError('Server connection error');
+      setError(t('serverError'));
     } finally {
       setUploading(false);
     }
@@ -67,25 +69,25 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth
       slotProps={{ paper: { sx: { borderRadius: 3 } } }}
     >
-      <DialogTitle sx={{ fontWeight: 'bold' }}>Upload Video</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 'bold' }}>{t('uploadVideo')}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
         {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">Video uploaded successfully!</Alert>}
+        {success && <Alert severity="success">{t('uploadSuccess')}</Alert>}
 
         <Box
           sx={{
             border: '2px dashed #C4B5FD', borderRadius: 3,
             p: 5, textAlign: 'center', cursor: 'pointer',
             transition: 'all 0.2s',
-            '&:hover': { borderColor: '#7C3AED', bgcolor: '#FAFAFF' },
+            '&:hover': { borderColor: '#7C3AED', bgcolor: 'action.hover' },
           }}
           onClick={() => fileInputRef.current?.click()}
         >
           <CloudUploadIcon sx={{ fontSize: 52, color: '#C4B5FD', mb: 1 }} />
           <Typography sx={{ color: selectedFile ? '#7C3AED' : '#999', mb: 0.5 }}>
-            {selectedFile ? selectedFile.name : 'Click to select a file'}
+            {selectedFile ? selectedFile.name : t('clickToSelect')}
           </Typography>
-          <Typography variant="caption" color="#ccc">MP4, WebM, MOV, AVI</Typography>
+          <Typography variant="caption" color="#ccc">{t('fileTypes')}</Typography>
         </Box>
 
         <input
@@ -98,11 +100,11 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
 
         <TextField
           fullWidth
-          label="Title"
+          label={t('videoTitle')}
           value={title}
           onChange={e => setTitle(e.target.value)}
           inputProps={{ maxLength: 100 }}
-          placeholder="Enter video title..."
+          placeholder={t('videoTitlePlaceholder')}
         />
 
         {uploading && (
@@ -114,7 +116,7 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
       </DialogContent>
 
       <DialogActions sx={{ p: 2.5, gap: 1 }}>
-        <Button onClick={handleClose} sx={{ textTransform: 'none', color: '#888' }}>Cancel</Button>
+        <Button onClick={handleClose} sx={{ textTransform: 'none', color: '#888' }}>{t('cancel')}</Button>
         <Button
           variant="contained"
           onClick={handleUpload}
@@ -125,7 +127,7 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
             boxShadow: '0 4px 15px rgba(124,58,237,0.3)',
           }}
         >
-          Upload
+          {t('upload')}
         </Button>
       </DialogActions>
     </Dialog>

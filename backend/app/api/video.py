@@ -14,8 +14,8 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 
 router = APIRouter(
-    prefix="/ushikavamp4",
-    tags=["ushikavamp4"]
+    prefix="/uflow",
+    tags=["uflow"]
 )
 
 
@@ -23,7 +23,7 @@ router = APIRouter(
 async def upload_video(
     file: UploadFile = File(...),
     title: str = Query(...),
-    current_user: str = Depends(get_user_from_token)
+    current_user: int = Depends(get_user_from_token)
 ):
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=400, detail="Недопустимый формат файла")
@@ -56,6 +56,21 @@ async def list_videos(
     finally:
         db.close()
     return videos_list
+
+
+@router.get("/likes")
+async def list_liked_videos(
+    offset: int = 0,
+    limit: int = 20,
+    current_user: int = Depends(get_user_from_token),
+):
+    db = SessionLocal()
+    try:
+        videos_list = video_db.get_all_liked_video(db, offset=offset, limit=limit, current_user=current_user)
+    finally:
+        db.close()
+    return videos_list
+
 
 
 @router.post("/video/{slug}/view")

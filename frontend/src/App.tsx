@@ -1,21 +1,64 @@
 import { Routes, Route } from 'react-router-dom';
+import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import CanvasPage, { PopupProvider } from './pages/CanvasPage';
-import VideoAuthPage from './pages/VideoAuthPage';
-import VideoJamPage from './pages/VideoJamPage';
+import UFlowAuthPage from './pages/UFlowAuthPage';
+import UFlowPage from './pages/UFlowPage';
 import VideoPage from './pages/VideoPage';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+
+function AppTheme({ children }: { children: React.ReactNode }) {
+  const { darkMode } = useLanguage();
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+      primary: { main: '#7C3AED' },
+      background: {
+        default: darkMode ? '#0F0F1A' : '#F5F6FF',
+        paper: darkMode ? '#1A1A2E' : '#ffffff',
+      },
+    },
+    typography: { fontFamily: '"Inter", "Roboto", sans-serif' },
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: { margin: 0, padding: 0 },
+          '*::-webkit-scrollbar': { width: '6px' },
+          '*::-webkit-scrollbar-track': { background: 'transparent' },
+          '*::-webkit-scrollbar-thumb': {
+            background: darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
+            borderRadius: '3px',
+          },
+          '*::-webkit-scrollbar-thumb:hover': {
+            background: darkMode ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.30)',
+          },
+        },
+      },
+    },
+  });
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+}
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/canvas" element={<PopupProvider><CanvasPage /></PopupProvider>} />
-      <Route path="/ushikavamp4/auth" element={<VideoAuthPage />} />
-      <Route path="/ushikavamp4" element={<VideoJamPage />} />
-      <Route path="/ushikavamp4/video/:slug" element={<VideoPage />} />
-    </Routes>
+    <LanguageProvider>
+      <AppTheme>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/canvas" element={<PopupProvider><CanvasPage /></PopupProvider>} />
+          <Route path="/uflow/auth" element={<UFlowAuthPage />} />
+          <Route path="/uflow" element={<UFlowPage />} />
+          <Route path="/uflow/video/:slug" element={<VideoPage />} />
+        </Routes>
+      </AppTheme>
+    </LanguageProvider>
   );
 }
 

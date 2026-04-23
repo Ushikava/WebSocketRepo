@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import { Box, Typography, IconButton, CircularProgress, Slider } from '@mui/material';
-import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
-import Navbar from '../components/videojam/Navbar';
+import Navbar from '../components/uflow/Navbar';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
-import AuthPromptDialog from '../components/videojam/AuthPromptDialog';
+import AuthPromptDialog from '../components/uflow/AuthPromptDialog';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
@@ -17,18 +17,6 @@ const MIN_W = 240;
 const MIN_H = 180;
 const MAX_W = 640;
 const MAX_H = 780;
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: { main: '#7C3AED' },
-    background: { default: '#F5F6FF', paper: '#ffffff' },
-  },
-  typography: { fontFamily: '"Inter", "Roboto", sans-serif' },
-  components: {
-    MuiCssBaseline: { styleOverrides: { body: { margin: 0, padding: 0 } } },
-  },
-});
 
 interface VideoItem {
   id: number;
@@ -50,6 +38,7 @@ function formatViews(n: number): string {
 
 function VideoPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,7 +57,7 @@ function VideoPage() {
   useEffect(() => {
     const token = localStorage.getItem('vj_token');
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-    fetch(`/api/ushikavamp4/video/${slug}`, { headers })
+    fetch(`/api/uflow/video/${slug}`, { headers })
       .then(r => {
         if (r.status === 404) { setNotFound(true); return null; }
         return r.json();
@@ -80,7 +69,7 @@ function VideoPage() {
         setLikesCount(data.likes);
         if (!sessionStorage.getItem(`viewed_${data.id}`)) {
           sessionStorage.setItem(`viewed_${data.slug}`, '1');
-          fetch(`/api/ushikavamp4/video/${data.slug}/view`, { method: 'POST' }).catch(() => {});
+          fetch(`/api/uflow/video/${data.slug}/view`, { method: 'POST' }).catch(() => {});
         }
       })
       .finally(() => setLoading(false));
@@ -135,7 +124,7 @@ function VideoPage() {
     const optimisticLiked = !liked;
     setLiked(optimisticLiked);
     setLikesCount(c => optimisticLiked ? c + 1 : Math.max(0, c - 1));
-    fetch(`/api/ushikavamp4/video/${video.slug}/like`, {
+    fetch(`/api/uflow/video/${video.slug}/like`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -145,9 +134,8 @@ function VideoPage() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box sx={{ minHeight: '100vh', bgcolor: '#F5F6FF' }}>
+    <>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
 
         <Navbar />
 
@@ -156,7 +144,7 @@ function VideoPage() {
           {loading && <CircularProgress sx={{ color: '#7C3AED', mt: 8 }} />}
 
           {!loading && notFound && (
-            <Typography color="#aaa" mt={8}>Video not found</Typography>
+            <Typography color="text.secondary" mt={8}>{t('videoNotFound')}</Typography>
           )}
 
           {!loading && video && (
@@ -232,18 +220,18 @@ function VideoPage() {
               }}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography fontWeight="bold" fontSize={15}>{video.title}</Typography>
-                  <Typography fontSize={12} color="#888">@{video.uploaded_by}</Typography>
+                  <Typography fontSize={12} color="text.secondary">@{video.uploaded_by}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                   <VisibilityIcon sx={{ fontSize: 15, color: '#bbb' }} />
-                  <Typography fontSize={12} color="#bbb" sx={{ mr: 0.5 }}>
+                  <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
                     {formatViews(video.views)}
                   </Typography>
                   <IconButton size="small" onClick={handleLike} sx={{ color: liked ? '#E91E63' : '#aaa', '&:hover': { color: '#E91E63' } }}>
                     {liked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
                   </IconButton>
                   {likesCount > 0 && (
-                    <Typography fontSize={12} color="#bbb" sx={{ mr: 0.5 }}>
+                    <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
                       {formatViews(likesCount)}
                     </Typography>
                   )}
@@ -257,7 +245,7 @@ function VideoPage() {
         </Box>
       </Box>
       <AuthPromptDialog open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} />
-    </ThemeProvider>
+    </>
   );
 }
 
