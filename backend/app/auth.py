@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -9,6 +9,7 @@ from settings import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/login", auto_error=False)
 
 def create_jwt_token(data: Dict):
     """
@@ -30,3 +31,12 @@ def get_user_from_token(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Токен истёк")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Недействительный токен")
+
+def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("sub")
+    except Exception:
+        return None

@@ -63,7 +63,7 @@ function VideoAuthPage() {
 
       localStorage.setItem('vj_token', data.access_token);
       localStorage.setItem('vj_username', username);
-      navigate('/ushikaVamp4');
+      navigate('/ushikavamp4');
     } catch {
       setError('Ошибка соединения с сервером');
     } finally {
@@ -94,7 +94,7 @@ function VideoAuthPage() {
 
       localStorage.setItem('vj_token', loginData.access_token);
       localStorage.setItem('vj_username', username);
-      navigate('/ushikaVamp4');
+      navigate('/ushikavamp4');
     } catch {
       setError('Ошибка соединения с сервером');
     } finally {

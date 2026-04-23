@@ -1,5 +1,5 @@
 import { Box, Container, Typography, Paper, styled, Divider, Link, Button } from "@mui/material";
-import { Email, LocationOn, GitHub, Celebration } from "@mui/icons-material";
+import { Email, LocationOn, GitHub, Casino } from "@mui/icons-material";
 import { keyframes } from "@mui/system";
 import { CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -68,24 +68,25 @@ function HomePage() {
 
               <Divider sx={{ my: 3 }} />
 
-              <Button
-                variant="contained"
-                startIcon={<Celebration />}
-                onClick={() => navigate('/login')}
-                sx={{ bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' } }}
-              >
-                HAPPY BIRTHDAY BUTTON
-              </Button>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Casino />}
+                  onClick={() => navigate('/login')}
+                  sx={{ bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' } }}
+                >
+                  Go to Canvas
+                </Button>
 
-              <Divider sx={{ my: 3 }} />
-
-              <Button
-                variant="contained"
-                disabled
-                sx={{ bgcolor: '#ff4f1f', '&:hover': { bgcolor: '#e63900' } }}
-              >
-                UshikavaMp4
-              </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/ushikavamp4/auth')}
+                  startIcon={<Casino />}
+                  sx={{ bgcolor: '#ff4f1f', '&:hover': { bgcolor: '#e63900' } }}
+                >
+                  Go to Videos
+                </Button>
+              </Box>
 
               <Divider sx={{ my: 3 }} />
 

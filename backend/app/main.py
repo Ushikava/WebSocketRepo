@@ -16,11 +16,14 @@ from db.session import engine
 from db.base import Base
 import models.canvas
 import models.user
+import models.video
 
 Base.metadata.create_all(bind=engine)
 
 UPLOADS_DIR = "uploads"
+VIDEOS_DIR = "videos"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(VIDEOS_DIR, exist_ok=True)
 
 app = FastAPI(title="Ushikava Backend")
 security = HTTPBasic()
@@ -44,12 +47,11 @@ app.include_router(videojam_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
 DIST_DIR = pathlib.Path(__file__).parent.parent.parent / "frontend" / "dist"
 
-# Serve static assets (js, css, images)
 app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
 
-# Catch-all: serve index.html for any route not matched above (SPA routing)
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str = "") -> FileResponse:
     return FileResponse(str(DIST_DIR / "index.html"))
