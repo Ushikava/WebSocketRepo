@@ -85,10 +85,4 @@ venv/Scripts/alembic downgrade -1
 /srv/ushikavapetproj/deploy.sh
 ```
 
-The deploy script builds the Docker image and restarts the container.
-After deploying a version with new migrations, SSH in and run:
-
-```bash
-cd /app/backend/app
-alembic upgrade head
-```
+Migrations are applied automatically on container start (`alembic upgrade head` runs before uvicorn).
