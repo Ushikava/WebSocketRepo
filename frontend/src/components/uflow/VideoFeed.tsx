@@ -57,7 +57,6 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
   const viewCounted = useRef(false);
   const prevVolumeRef = useRef(volume || 70);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoSize, setVideoSize] = useState({ w: 300, h: 520 });
@@ -74,7 +73,6 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
     if (!v) return;
     if (isActive || isFullscreen) {
       v.play().catch(() => {});
-      setPlaying(true);
       if (isActive && !viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
         viewCounted.current = true;
         sessionStorage.setItem(`viewed_${video.slug}`, '1');
@@ -82,7 +80,6 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
       }
     } else {
       v.pause();
-      setPlaying(false);
     }
   }, [isActive, isFullscreen, video.id]);
 
@@ -114,8 +111,8 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
       onActivate();
       return;
     }
-    if (v.paused) { v.play(); setPlaying(true); }
-    else { v.pause(); setPlaying(false); }
+    if (v.paused) { v.play(); }
+    else { v.pause(); }
   };
 
   const handleVolumeChange = (_: Event, value: number | number[]) => {
