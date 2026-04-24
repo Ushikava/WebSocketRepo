@@ -1,3 +1,4 @@
+import os
 import secrets
 
 from sqlalchemy.orm import Session
@@ -110,6 +111,22 @@ def toggle_like(db: Session, slug: str, user_id: int) -> dict:
             stats.likes += 1
         db.commit()
         return {"is_liked": True, "likes": stats.likes if stats else 1}
+
+def delete_video(db: Session, slug: str, user_id: int):
+    video = db.query(UploadedVideos).filter(UploadedVideos.slug == slug).first()
+    if not video:
+        return None
+    if video.uploaded_by != user_id:
+        return False
+    filepath = os.path.join("videos", video.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    db.query(VideoLike).filter(VideoLike.video_id == video.id).delete()
+    db.query(VideoStats).filter(VideoStats.video_id == video.id).delete()
+    db.delete(video)
+    db.commit()
+    return True
+
 
 def get_all_liked_video(db: Session, offset: int = 0, limit: int = 20, current_user: int = None):
     if not current_user:

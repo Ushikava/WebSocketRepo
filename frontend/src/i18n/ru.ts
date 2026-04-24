@@ -28,6 +28,7 @@ const ru: Record<TranslationKeys, string> = {
   register: 'Зарегистрироваться',
 
   // VideoFeed / VideoList
+  deleteVideo: 'Удалить видео',
   noVideosYet: 'Видео пока нет',
   uploadFirstVideo: 'Загрузить первое видео',
   videoNotFound: 'Видео не найдено',

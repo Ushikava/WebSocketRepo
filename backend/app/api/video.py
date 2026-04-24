@@ -95,6 +95,20 @@ async def choose_video(slug: str, current_user: str = Depends(get_optional_user)
     return selected_video
 
 
+@router.delete("/video/{slug}")
+async def delete_video(slug: str, current_user: int = Depends(get_user_from_token)):
+    db = SessionLocal()
+    try:
+        result = video_db.delete_video(db, slug=slug, user_id=current_user)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Видео не найдено")
+        if result is False:
+            raise HTTPException(status_code=403, detail="Нет доступа")
+    finally:
+        db.close()
+    return {"ok": True}
+
+
 @router.post("/video/{slug}/like")
 async def like_video(slug: str, current_user: str = Depends(get_user_from_token)):
     db = SessionLocal()

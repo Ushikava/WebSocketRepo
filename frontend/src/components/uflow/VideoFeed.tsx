@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, CircularProgress, IconButton, Slider } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, IconButton, Slider, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShareIcon from '@mui/icons-material/Share';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import AuthPromptDialog from './AuthPromptDialog';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { authFetch } from '../../utils/authFetch';
-import ShareIcon from '@mui/icons-material/Share';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 
 const MIN_W = 240;
 const MIN_H = 180;
@@ -45,27 +47,35 @@ interface FeedItemProps {
   onVolumeChange: (v: number) => void;
   itemRef: (el: HTMLDivElement | null) => void;
   onActivate: () => void;
+  onDelete: (id: number) => void;
+  onFullscreenChange: (active: boolean) => void;
 }
 
-function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate }: FeedItemProps) {
+function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate, onDelete, onFullscreenChange }: FeedItemProps) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewCounted = useRef(false);
+  const prevVolumeRef = useRef(volume || 70);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [showVolume, setShowVolume] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoSize, setVideoSize] = useState({ w: 300, h: 520 });
   const [liked, setLiked] = useState(video.is_liked);
   const [likesCount, setLikesCount] = useState(video.likes);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const isAuthor = localStorage.getItem('vj_username') === video.uploaded_by;
+  const { t } = useLanguage();
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (isActive) {
+    if (isActive || isFullscreen) {
       v.play().catch(() => {});
       setPlaying(true);
-      if (!viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
+      if (isActive && !viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
         viewCounted.current = true;
         sessionStorage.setItem(`viewed_${video.slug}`, '1');
         fetch(`/api/uflow/video/${video.slug}/view`, { method: 'POST' }).catch(() => {});
@@ -74,7 +84,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
       v.pause();
       setPlaying(false);
     }
-  }, [isActive, video.id]);
+  }, [isActive, isFullscreen, video.id]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -100,7 +110,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (!isActive) {
+    if (!isActive && !isFullscreen) {
       onActivate();
       return;
     }
@@ -113,13 +123,41 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
   };
 
   const toggleMute = () => {
-    onVolumeChange(volume === 0 ? 70 : 0);
+    if (volume === 0) {
+      onVolumeChange(prevVolumeRef.current);
+    } else {
+      prevVolumeRef.current = volume;
+      onVolumeChange(0);
+    }
   };
 
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowControls(false), 2500);
+  const toggleFullscreen = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      onFullscreenChange(false);
+      document.exitFullscreen();
+    } else {
+      onFullscreenChange(true);
+      el.requestFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const onChange = () => {
+      const active = document.fullscreenElement === containerRef.current;
+      setIsFullscreen(active);
+      if (!document.fullscreenElement) onFullscreenChange(false);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, [onFullscreenChange]);
+
+  const handleDelete = () => {
+    setMenuAnchor(null);
+    authFetch(`/api/uflow/video/${video.slug}`, { method: 'DELETE' })
+      .then(r => { if (r.ok) onDelete(video.id); })
+      .catch(() => {});
   };
 
   const handleLike = () => {
@@ -158,8 +196,7 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
 
         {/* Player */}
         <Box
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setShowControls(false)}
+          ref={containerRef}
           sx={{
             position: 'relative', zIndex: 1,
             width: videoSize.w, height: videoSize.h,
@@ -179,33 +216,63 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
             style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
 
-          {/* Controls overlay */}
+          {/* Gradient */}
           <Box sx={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-            px: 1.5, pt: 4, pb: 1.5,
-            opacity: showControls ? 1 : 0,
-            transition: 'opacity 0.25s',
-            pointerEvents: showControls ? 'auto' : 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <IconButton size="small" onClick={togglePlay} sx={{ color: '#fff', p: 0.5 }}>
-              {playing ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 56,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
+            pointerEvents: 'none',
+          }} />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.5 }}>
-                {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
-              </IconButton>
+          {/* Fullscreen button — bottom right */}
+          <IconButton
+            size="small"
+            onClick={toggleFullscreen}
+            sx={{
+              position: 'absolute', bottom: 10, right: 10, zIndex: 2,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              color: '#fff', p: 0.5,
+              borderRadius: 2,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+            }}
+          >
+            {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+          </IconButton>
+
+          {/* Volume pill — bottom left, slides out on hover */}
+          <Box
+            onMouseEnter={() => setShowVolume(true)}
+            onMouseLeave={() => setShowVolume(false)}
+            sx={{
+              position: 'absolute', bottom: 10, left: 10, zIndex: 2,
+              display: 'flex', alignItems: 'center',
+              bgcolor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 3,
+              px: 0.75, py: 0.25,
+              overflow: 'hidden',
+            }}
+          >
+            <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.25, flexShrink: 0 }}>
+              {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+            </IconButton>
+            <Box sx={{
+              width: showVolume ? 80 : 0,
+              opacity: showVolume ? 1 : 0,
+              ml: showVolume ? 0.5 : 0,
+              pointerEvents: showVolume ? 'auto' : 'none',
+              transition: 'width 0.25s ease, opacity 0.2s ease, margin 0.25s ease',
+              display: 'flex', alignItems: 'center',
+            }}>
               <Slider
                 value={volume}
                 onChange={handleVolumeChange}
                 size="small"
                 sx={{
-                  width: 70, color: '#fff', p: 0,
-                  '& .MuiSlider-thumb': { width: 10, height: 10, bgcolor: '#fff' },
-                  '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.3)' },
-                  '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff' },
+                  width: 72, color: '#fff', p: 0, mx: 0.5, flexShrink: 0,
+                  '& .MuiSlider-thumb': { display: 'none' },
+                  '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.25)', opacity: 1 },
+                  '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff', borderRadius: 2 },
                 }}
               />
             </Box>
@@ -246,6 +313,26 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
             <IconButton size="small" sx={{ color: '#aaa', '&:hover': { color: '#7C3AED' } }}>
               <ShareIcon fontSize="small" />
             </IconButton>
+            {isAuthor && (
+              <>
+                <IconButton size="small" onClick={e => setMenuAnchor(e.currentTarget)} sx={{ color: '#aaa', '&:hover': { color: 'text.primary' } }}>
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+                <Menu
+                  anchorEl={menuAnchor}
+                  open={!!menuAnchor}
+                  onClose={() => setMenuAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{ paper: { sx: { borderRadius: 2, minWidth: 150 } } }}
+                >
+                  <MenuItem onClick={handleDelete} sx={{ color: '#f44336' }}>
+                    <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
+                    <ListItemText primary={t('deleteVideo')} primaryTypographyProps={{ fontSize: 14 }} />
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
           </Box>
         </Box>
       </Box>
@@ -264,17 +351,23 @@ interface VideoFeedProps {
   loading: boolean;
   onUploadClick: () => void;
   resetKey: number;
+  onDelete: (id: number) => void;
 }
 
 function VideoFeed({
   videos, currentIndex, scrollTarget, onCurrentChange,
-  onLoadMore, hasMore, loading, onUploadClick, resetKey,
+  onLoadMore, hasMore, loading, onUploadClick, resetKey, onDelete,
 }: VideoFeedProps) {
   const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const rafRef = useRef<number | null>(null);
+  const fullscreenActiveRef = useRef(false);
   const [volume, setVolume] = useState(() => Number(localStorage.getItem('vj_volume') ?? 0));
+
+  const handleFullscreenChange = useCallback((active: boolean) => {
+    fullscreenActiveRef.current = active;
+  }, []);
 
   const handleVolumeChange = (val: number) => {
     setVolume(val);
@@ -298,6 +391,7 @@ function VideoFeed({
   }, [onCurrentChange]);
 
   const handleScroll = useCallback(() => {
+    if (fullscreenActiveRef.current) return;
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(findMostVisible);
   }, [findMostVisible]);
@@ -362,6 +456,8 @@ function VideoFeed({
           onVolumeChange={handleVolumeChange}
           itemRef={el => { itemRefs.current[i] = el; }}
           onActivate={() => onCurrentChange(i)}
+          onDelete={onDelete}
+          onFullscreenChange={handleFullscreenChange}
         />
       ))}
       {loading && (

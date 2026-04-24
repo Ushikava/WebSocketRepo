@@ -96,6 +96,7 @@ function UFlowPage() {
           loading={loadingVideos}
           onUploadClick={() => setUploadOpen(true)}
           resetKey={feedResetKey}
+          onDelete={(id) => setVideos(prev => prev.filter(v => v.id !== id))}
         />
 
         <Box sx={{ width: 220, flexShrink: 0, display: { xs: 'none', md: 'block' } }} />

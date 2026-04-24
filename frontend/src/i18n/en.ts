@@ -26,6 +26,7 @@ const en = {
   register: 'Register',
 
   // VideoFeed / VideoList
+  deleteVideo: 'Delete video',
   noVideosYet: 'No videos yet',
   uploadFirstVideo: 'Upload first video',
   videoNotFound: 'Video not found',
