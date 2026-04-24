@@ -5,6 +5,9 @@ const en = {
   upload: 'Upload',
   logIn: 'Log In',
   logout: 'Logout',
+  profile: 'Profile',
+  myVideos: 'My Videos',
+  settings: 'Settings',
 
   // Sidebar
   navForYou: 'For You',
@@ -46,13 +49,16 @@ const en = {
   // VideoAuthPage
   loginTab: 'Sign In',
   registerTab: 'Register',
-  username: 'Username',
+  username: 'Nickname',
+  email: 'Email',
   password: 'Password',
+  confirmPassword: 'Confirm password',
   loginButton: 'Sign In',
   registerButton: 'Register',
   loginError: 'Login error',
   registerError: 'Registration error',
   connectionError: 'Server connection error',
+  passwordMismatch: 'Passwords do not match',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

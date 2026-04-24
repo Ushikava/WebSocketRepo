@@ -1,23 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 
 import Navbar from '../components/uflow/Navbar';
+import { authFetch } from '../utils/authFetch';
 import Sidebar from '../components/uflow/Sidebar';
 import VideoFeed from '../components/uflow/VideoFeed';
-import VideoList from '../components/uflow/VideoList';
 import UploadDialog from '../components/uflow/UploadDialog';
+import BottomNav from '../components/uflow/BottomNav';
 import type { VideoItem } from '../components/uflow/VideoFeed';
 
 const LIMIT = 15;
 
 function UFlowPage() {
+  const { tab = 'for-you' } = useParams<{ tab: string }>();
+  const navigate = useNavigate();
 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState('for-you');
-
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [scrollTarget, setScrollTarget] = useState<{ index: number; token: number } | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingVideos, setLoadingVideos] = useState(true);
@@ -25,18 +26,19 @@ function UFlowPage() {
 
   const fetchFromUrl = useCallback(async (url: string, fetchOffset: number, append: boolean) => {
     setLoadingVideos(true);
+    if (!append) {
+      setVideos([]);
+      setCurrentIndex(0);
+      setFeedResetKey(k => k + 1);
+    }
     try {
-      const token = localStorage.getItem('vj_token');
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${url}?offset=${fetchOffset}&limit=${LIMIT}`, { headers });
+      const res = await authFetch(`${url}?offset=${fetchOffset}&limit=${LIMIT}`);
       const data: Omit<VideoItem, 'url'>[] = await res.json();
       const mapped: VideoItem[] = data.map(v => ({ ...v, url: `/videos/${v.filename}` }));
       if (append) {
         setVideos(prev => [...prev, ...mapped]);
       } else {
         setVideos(mapped);
-        setCurrentIndex(0);
-        setFeedResetKey(k => k + 1);
       }
       setHasMore(data.length === LIMIT);
       setOffset(fetchOffset + data.length);
@@ -45,81 +47,49 @@ function UFlowPage() {
     }
   }, []);
 
-  const fetchVideos = useCallback((fetchOffset: number, append: boolean) => {
-    return fetchFromUrl('/api/uflow/videos', fetchOffset, append);
-  }, [fetchFromUrl]);
-
-  const handleNavChange = async (label: string) => {
-    setActiveNav(label);
-
-    if (['for-you', 'trending', 'following', 'random'].includes(label)) {
-      setOffset(0);
-      fetchVideos(0, false);
-      return;
-    }
-
-    if (label === 'my-likes') {
-      fetchFromUrl('/api/uflow/likes', 0, false);
-      return;
-    }
-
-  if (label === 'history') {
-    setLoadingVideos(true);
-
-    try {
-      const token = localStorage.getItem("vj_token");
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const res = await fetch("/api/uflow/videos/history", { headers });
-      const data: Omit<VideoItem, "url">[] = await res.json();
-
-      const mapped: VideoItem[] = data.map(v => ({
-        ...v,
-        url: `/videos/${v.filename}`,
-      }));
-
-      setVideos(mapped);
-      setHasMore(false);
-      setOffset(0);
-      setCurrentIndex(0);
-
-    } finally {
-      setLoadingVideos(false);
-    }
-
-    return;
-  }
-};
-
   useEffect(() => {
-    fetchVideos(0, false);
-  }, [fetchVideos]);
+    if (tab === 'my-likes') {
+      fetchFromUrl('/api/uflow/likes', 0, false);
+    } else if (tab === 'history') {
+      setLoadingVideos(true);
+      setVideos([]);
+      setCurrentIndex(0);
+      setFeedResetKey(k => k + 1);
+      authFetch('/api/uflow/videos/history')
+        .then(r => r.json())
+        .then((data: Omit<VideoItem, 'url'>[]) => {
+          setVideos(data.map(v => ({ ...v, url: `/videos/${v.filename}` })));
+          setHasMore(false);
+          setOffset(0);
+        })
+        .finally(() => setLoadingVideos(false));
+    } else {
+      fetchFromUrl('/api/uflow/videos', 0, false);
+    }
+  }, [tab, fetchFromUrl]);
+
+  const handleNavChange = (label: string) => {
+    navigate(`/uflow/${label}`);
+  };
 
   const handleLoadMore = useCallback(() => {
     if (loadingVideos || !hasMore) return;
-    const url = activeNav === 'my-likes'
-      ? '/api/uflow/likes'
-      : '/api/uflow/videos';
+    const url = tab === 'my-likes' ? '/api/uflow/likes' : '/api/uflow/videos';
     fetchFromUrl(url, offset, true);
-  }, [loadingVideos, hasMore, fetchFromUrl, offset, activeNav]);
-
-  const handleListSelect = (index: number) => {
-    setScrollTarget({ index, token: Date.now() });
-  };
+  }, [loadingVideos, hasMore, fetchFromUrl, offset, tab]);
 
   return (
-    <Box sx={{ height: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ height: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden', pb: { xs: '56px', md: 0 } }}>
 
       <Navbar onUploadClick={() => setUploadOpen(true)} />
 
-      {/* Body */}
-      <Box sx={{ display: 'flex', flex: 1, minHeight: 0, px: 3, gap: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
-        <Sidebar activeNav={activeNav} onNavChange={handleNavChange} />
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0, px: { xs: 1, md: 3 }, gap: { xs: 1, md: 3 }, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+        <Sidebar activeNav={tab} onNavChange={handleNavChange} />
 
         <VideoFeed
           videos={videos}
           currentIndex={currentIndex}
-          scrollTarget={scrollTarget}
+          scrollTarget={null}
           onCurrentChange={setCurrentIndex}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}
@@ -128,21 +98,16 @@ function UFlowPage() {
           resetKey={feedResetKey}
         />
 
-        <VideoList
-          videos={videos}
-          currentIndex={currentIndex}
-          onSelect={handleListSelect}
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loading={loadingVideos}
-        />
+        <Box sx={{ width: 220, flexShrink: 0, display: { xs: 'none', md: 'block' } }} />
       </Box>
 
       <UploadDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onUploaded={() => fetchVideos(0, false)}
+        onUploaded={() => navigate(`/uflow/${tab}`)}
       />
+
+      <BottomNav activeNav={tab} onNavChange={handleNavChange} />
     </Box>
   );
 }

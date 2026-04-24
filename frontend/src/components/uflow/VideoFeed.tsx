@@ -10,6 +10,7 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AuthPromptDialog from './AuthPromptDialog';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { authFetch } from '../../utils/authFetch';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
@@ -43,9 +44,10 @@ interface FeedItemProps {
   volume: number;
   onVolumeChange: (v: number) => void;
   itemRef: (el: HTMLDivElement | null) => void;
+  onActivate: () => void;
 }
 
-function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItemProps) {
+function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate }: FeedItemProps) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,9 +87,10 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
     const v = videoRef.current;
     if (!v) return;
     const ratio = v.videoWidth / v.videoHeight;
+    const maxW = Math.min(MAX_W, window.innerWidth - 32);
     let w = v.videoWidth;
     let h = v.videoHeight;
-    if (w > MAX_W) { w = MAX_W; h = w / ratio; }
+    if (w > maxW) { w = maxW; h = w / ratio; }
     if (h > MAX_H) { h = MAX_H; w = h * ratio; }
     if (w < MIN_W) { w = MIN_W; h = w / ratio; }
     if (h < MIN_H) { h = MIN_H; w = h * ratio; }
@@ -97,6 +100,10 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    if (!isActive) {
+      onActivate();
+      return;
+    }
     if (v.paused) { v.play(); setPlaying(true); }
     else { v.pause(); setPlaying(false); }
   };
@@ -116,18 +123,14 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
   };
 
   const handleLike = () => {
-    const token = localStorage.getItem('vj_token');
-    if (!token) {
+    if (!localStorage.getItem('vj_token')) {
       setAuthPromptOpen(true);
       return;
     }
     const optimisticLiked = !liked;
     setLiked(optimisticLiked);
     setLikesCount(c => optimisticLiked ? c + 1 : Math.max(0, c - 1));
-    fetch(`/api/uflow/video/${video.slug}/like`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    authFetch(`/api/uflow/video/${video.slug}/like`, { method: 'POST' })
       .then(r => r.json())
       .then(data => { setLiked(data.is_liked); setLikesCount(data.likes); })
       .catch(() => { setLiked(!optimisticLiked); setLikesCount(c => optimisticLiked ? Math.max(0, c - 1) : c + 1); });
@@ -140,7 +143,8 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef }: FeedItem
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        py: 3,
+        py: { xs: 1.5, md: 3 },
+        px: { xs: 1, md: 0 },
         borderBottom: 1, borderColor: 'divider',
       }}
     >
@@ -347,7 +351,7 @@ function VideoFeed({
     <Box
       ref={scrollRef}
       onScroll={handleScroll}
-      sx={{ flex: 1, minHeight: 0, overflowY: 'auto', bgcolor: 'background.default' }}
+      sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', bgcolor: 'background.default' }}
     >
       {videos.map((v, i) => (
         <FeedItem
@@ -357,6 +361,7 @@ function VideoFeed({
           volume={volume}
           onVolumeChange={handleVolumeChange}
           itemRef={el => { itemRefs.current[i] = el; }}
+          onActivate={() => onCurrentChange(i)}
         />
       ))}
       {loading && (

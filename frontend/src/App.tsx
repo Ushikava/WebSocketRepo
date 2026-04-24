@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -53,8 +53,9 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/canvas" element={<PopupProvider><CanvasPage /></PopupProvider>} />
+          <Route path="/uflow" element={<Navigate to="/uflow/for-you" replace />} />
           <Route path="/uflow/auth" element={<UFlowAuthPage />} />
-          <Route path="/uflow" element={<UFlowPage />} />
+          <Route path="/uflow/:tab" element={<UFlowPage />} />
           <Route path="/uflow/video/:slug" element={<VideoPage />} />
         </Routes>
       </AppTheme>

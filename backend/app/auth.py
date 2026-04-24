@@ -1,5 +1,6 @@
 import datetime
-from typing import Dict, Optional
+import secrets
+from typing import Dict, Optional, Tuple
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -7,23 +8,24 @@ from fastapi.security import OAuth2PasswordBearer
 
 from settings import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
+REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/login", auto_error=False)
 
-def create_jwt_token(data: Dict):
-    """
-    Функция для создания JWT токена. Мы копируем входные данные, добавляем время истечения и кодируем токен.
-    """
-    to_encode = data.copy()
-    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_user_from_token(token: str = Depends(oauth2_scheme)):
-    """
-    Функция для извлечения информации о пользователе из токена. Проверяем токен и извлекаем утверждение о пользователе.
-    """
+def create_access_token(user_id: int, username: str) -> str:
+    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode({"sub": str(user_id), "username": username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_refresh_token() -> Tuple[str, datetime.datetime]:
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    return token, expires_at
+
+
+def get_user_from_token(token: str = Depends(oauth2_scheme)) -> int:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return int(payload.get("sub"))
@@ -32,7 +34,8 @@ def get_user_from_token(token: str = Depends(oauth2_scheme)):
     except (jwt.InvalidTokenError, ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Недействительный токен")
 
-def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
+
+def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[int]:
     if not token:
         return None
     try:

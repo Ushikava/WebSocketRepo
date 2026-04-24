@@ -53,6 +53,7 @@ function Sidebar({ activeNav, onNavChange }: SidebarProps) {
   return (
     <Box sx={{
       width: 220, flexShrink: 0,
+      display: { xs: 'none', md: 'block' },
       bgcolor: 'background.paper', borderRadius: 3,
       p: 2.5, boxShadow: '0 2px 12px rgba(124,58,237,0.07)',
       height: 'fit-content', position: 'sticky', top: 80,

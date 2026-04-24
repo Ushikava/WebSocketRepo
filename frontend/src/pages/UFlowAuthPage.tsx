@@ -7,7 +7,6 @@ import {
 } from '@mui/material';
 import { CssBaseline } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import PlayCircleFilledIcon from '@mui/icons-material/PlayCircleFilled';
 
 const theme = createTheme({
   components: {
@@ -42,30 +41,32 @@ function UFlowAuthPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabValue>('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
+
+  const saveSession = (data: { access_token: string; refresh_token: string; username: string }) => {
+    localStorage.setItem('vj_token', data.access_token);
+    localStorage.setItem('vj_refresh_token', data.refresh_token);
+    localStorage.setItem('vj_username', data.username);
+    navigate('/uflow');
+  };
 
   const handleLogin = async () => {
     setError('');
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-
-      const res = await fetch('/api/login', { method: 'POST', body: formData });
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.detail || t('loginError'));
-        return;
-      }
-
-      localStorage.setItem('vj_token', data.access_token);
-      localStorage.setItem('vj_username', username);
-      navigate('/uflow');
+      if (!res.ok) { setError(data.detail || t('loginError')); return; }
+      saveSession(data);
     } catch {
       setError(t('connectionError'));
     } finally {
@@ -75,28 +76,20 @@ function UFlowAuthPage() {
 
   const handleRegister = async () => {
     setError('');
+    if (password !== confirmPassword) {
+      setError(t('passwordMismatch'));
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/register?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-        { method: 'POST' }
-      );
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.detail || t('registerError'));
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      const loginRes = await fetch('/api/login', { method: 'POST', body: formData });
-      const loginData = await loginRes.json();
-
-      localStorage.setItem('vj_token', loginData.access_token);
-      localStorage.setItem('vj_username', username);
-      navigate('/uflow');
+      if (!res.ok) { setError(data.detail || t('registerError')); return; }
+      saveSession(data);
     } catch {
       setError(t('connectionError'));
     } finally {
@@ -105,66 +98,91 @@ function UFlowAuthPage() {
   };
 
   const handleSubmit = () => {
-    if (!username.trim() || !password.trim()) return;
-    if (tab === 'login') handleLogin();
-    else handleRegister();
+    if (tab === 'login') {
+      if (!email.trim() || !password.trim()) return;
+      handleLogin();
+    } else {
+      if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) return;
+      handleRegister();
+    }
+  };
+
+  const handleTabChange = (_: React.SyntheticEvent, v: TabValue) => {
+    setTab(v);
+    setError('');
   };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <GradientBox
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={6} sx={{ p: 5, borderRadius: 3, minWidth: 340, textAlign: 'center' }}>
-          <PlayCircleFilledIcon sx={{ fontSize: 48, color: '#7c4dff', mb: 1 }} />
-
-          <Typography variant="h5" fontWeight="bold" gutterBottom>
+      <GradientBox sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Paper elevation={6} sx={{ p: 3, borderRadius: 3, width: 320, textAlign: 'center' }}>
+          <Typography variant="h6" fontWeight="bold" mb={1}>
             UFlow
           </Typography>
 
           <Tabs
             value={tab}
-            onChange={(_, v) => { setTab(v); setError(''); }}
+            onChange={handleTabChange}
             centered
-            sx={{ mb: 3, '& .MuiTabs-indicator': { backgroundColor: '#7c4dff' } }}
+            sx={{ mb: 2, '& .MuiTabs-indicator': { backgroundColor: '#7c4dff' } }}
           >
-            <Tab label={t('loginTab')} value="login" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
-            <Tab label={t('registerTab')} value="register" sx={{ '&.Mui-selected': { color: '#7c4dff' } }} />
+            <Tab label={t('loginTab')} value="login" sx={{ '&.Mui-selected': { color: '#7c4dff' }, minHeight: 36, py: 0.5 }} />
+            <Tab label={t('registerTab')} value="register" sx={{ '&.Mui-selected': { color: '#7c4dff' }, minHeight: 36, py: 0.5 }} />
           </Tabs>
 
-          {error && <Alert severity="error" sx={{ mb: 2, textAlign: 'left' }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 1.5, textAlign: 'left' }}>{error}</Alert>}
+
+          {tab === 'register' && (
+            <TextField
+              fullWidth size="small"
+              label={t('username')}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              sx={{ mb: 1.5 }}
+              inputProps={{ maxLength: 32 }}
+            />
+          )}
 
           <TextField
-            fullWidth
-            label={t('username')}
-            value={username}
-            onChange={e => setUsername(e.target.value)}
+            fullWidth size="small"
+            label={t('email')}
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            sx={{ mb: 2 }}
-            inputProps={{ maxLength: 32 }}
+            sx={{ mb: 1.5 }}
           />
+
           <TextField
-            fullWidth
+            fullWidth size="small"
             label={t('password')}
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            sx={{ mb: 3 }}
+            sx={{ mb: tab === 'register' ? 1.5 : 2 }}
           />
+
+          {tab === 'register' && (
+            <TextField
+              fullWidth size="small"
+              label={t('confirmPassword')}
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              sx={{ mb: 2 }}
+            />
+          )}
 
           <Button
             fullWidth
             variant="contained"
             size="large"
             onClick={handleSubmit}
-            disabled={!username.trim() || !password.trim() || loading}
+            disabled={loading}
             sx={{ py: 1.5, bgcolor: '#7c4dff', '&:hover': { bgcolor: '#651fff' } }}
           >
             {loading

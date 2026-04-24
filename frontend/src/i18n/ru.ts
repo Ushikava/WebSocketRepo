@@ -7,6 +7,9 @@ const ru: Record<TranslationKeys, string> = {
   upload: 'Загрузить',
   logIn: 'Войти',
   logout: 'Выйти',
+  profile: 'Профиль',
+  myVideos: 'Мои видео',
+  settings: 'Настройки',
 
   // Sidebar
   navForYou: 'Для вас',
@@ -48,13 +51,16 @@ const ru: Record<TranslationKeys, string> = {
   // VideoAuthPage
   loginTab: 'Войти',
   registerTab: 'Регистрация',
-  username: 'Имя пользователя',
+  username: 'Никнейм',
+  email: 'Email',
   password: 'Пароль',
+  confirmPassword: 'Подтвердите пароль',
   loginButton: 'Войти',
   registerButton: 'Зарегистрироваться',
   loginError: 'Ошибка входа',
   registerError: 'Ошибка регистрации',
   connectionError: 'Ошибка соединения с сервером',
+  passwordMismatch: 'Пароли не совпадают',
 };
 
 export default ru;

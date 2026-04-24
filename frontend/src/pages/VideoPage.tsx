@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Box, Typography, IconButton, CircularProgress, Slider } from '@mui/material';
 import Navbar from '../components/uflow/Navbar';
@@ -10,6 +10,8 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AuthPromptDialog from '../components/uflow/AuthPromptDialog';
+import BottomNav from '../components/uflow/BottomNav';
+import { authFetch } from '../utils/authFetch';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
@@ -38,6 +40,7 @@ function formatViews(n: number): string {
 
 function VideoPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,9 +58,7 @@ function VideoPage() {
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('vj_token');
-    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-    fetch(`/api/uflow/video/${slug}`, { headers })
+    authFetch(`/api/uflow/video/${slug}`)
       .then(r => {
         if (r.status === 404) { setNotFound(true); return null; }
         return r.json();
@@ -116,18 +117,14 @@ function VideoPage() {
 
   const handleLike = () => {
     if (!video) return;
-    const token = localStorage.getItem('vj_token');
-    if (!token) {
+    if (!localStorage.getItem('vj_token')) {
       setAuthPromptOpen(true);
       return;
     }
     const optimisticLiked = !liked;
     setLiked(optimisticLiked);
     setLikesCount(c => optimisticLiked ? c + 1 : Math.max(0, c - 1));
-    fetch(`/api/uflow/video/${video.slug}/like`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    authFetch(`/api/uflow/video/${video.slug}/like`, { method: 'POST' })
       .then(r => r.json())
       .then(data => { setLiked(data.is_liked); setLikesCount(data.likes); })
       .catch(() => { setLiked(!optimisticLiked); setLikesCount(c => optimisticLiked ? Math.max(0, c - 1) : c + 1); });
@@ -135,7 +132,7 @@ function VideoPage() {
 
   return (
     <>
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '56px', md: 0 } }}>
 
         <Navbar />
 
@@ -245,6 +242,7 @@ function VideoPage() {
         </Box>
       </Box>
       <AuthPromptDialog open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} />
+      <BottomNav activeNav="" onNavChange={(id) => navigate(`/uflow/${id}`)} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { authFetch } from '../../utils/authFetch';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, Alert, LinearProgress, TextField,
@@ -16,7 +17,6 @@ interface UploadDialogProps {
 function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const token = localStorage.getItem('vj_token');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -32,16 +32,15 @@ function UploadDialog({ open, onClose, onUploaded }: UploadDialogProps) {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !token || !title.trim()) return;
+    if (!selectedFile || !title.trim()) return;
     setUploading(true);
     setError('');
     setSuccess(false);
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      const res = await fetch(`/api/uflow/video?title=${encodeURIComponent(title.trim())}`, {
+      const res = await authFetch(`/api/uflow/video?title=${encodeURIComponent(title.trim())}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
