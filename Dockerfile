@@ -15,8 +15,9 @@ COPY backend/app/ ./backend/app/
 
 COPY --from=frontend-build /build/dist ./frontend/dist
 
-RUN mkdir -p /app/backend/app/uploads
+RUN mkdir -p /app/backend/app/uploads /app/backend/app/videos
 VOLUME /app/backend/app/uploads
+VOLUME /app/backend/app/videos
 
 WORKDIR /app/backend/app
 EXPOSE 8000

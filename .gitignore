@@ -25,3 +25,5 @@ venv
 *cache*
 backend/app/uploads/*
 backend/app/videos/*
+
+deploy.sh
