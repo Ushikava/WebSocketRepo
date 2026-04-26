@@ -127,7 +127,16 @@ function VideoPlayer({
     const onChange = () => {
       const active = document.fullscreenElement === containerRef.current;
       setIsFullscreen(active);
-      if (!document.fullscreenElement) onFullscreenChange?.(false);
+      if (!active) {
+        const el = containerRef.current;
+        if (el) {
+          el.style.transition = 'none';
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (containerRef.current) containerRef.current.style.transition = '';
+          }));
+        }
+        onFullscreenChange?.(false);
+      }
     };
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
@@ -173,7 +182,7 @@ function VideoPlayer({
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
 
-        {/* Bottom gradient — fades with controls */}
+        {/* Bottom gradient*/}
         <Box sx={{
           position: 'absolute', bottom: 0, left: 0, right: 0, height: 56,
           background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
@@ -182,7 +191,7 @@ function VideoPlayer({
           transition: 'opacity 0.25s',
         }} />
 
-        {/* Fullscreen button — bottom right */}
+        {/* Fullscreen button*/}
         <IconButton
           size="small"
           onClick={toggleFullscreen}
@@ -201,7 +210,7 @@ function VideoPlayer({
           {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
         </IconButton>
 
-        {/* Volume pill — bottom left */}
+        {/* Volume pill*/}
         <Box
           onMouseEnter={() => setShowVolume(true)}
           onMouseLeave={() => setShowVolume(false)}
