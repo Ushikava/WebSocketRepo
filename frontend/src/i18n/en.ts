@@ -32,6 +32,12 @@ const en = {
   videoNotFound: 'Video not found',
   loadMore: 'Load more',
 
+  // UFlowProfilePage
+  userNotFound: 'User not found',
+  profileVideos: 'Videos',
+  profileViews: 'Views',
+  profileLikes: 'Likes',
+
   // UploadDialog
   uploadVideo: 'Upload Video',
   uploadSuccess: 'Video uploaded successfully!',

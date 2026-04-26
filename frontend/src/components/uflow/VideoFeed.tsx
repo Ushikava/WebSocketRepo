@@ -172,10 +172,7 @@ function VideoFeed({
   const rafRef = useRef<number | null>(null);
   const fullscreenActiveRef = useRef(false);
   const [volume, setVolume] = useState(() => Number(localStorage.getItem('vj_volume') ?? 0));
-
-  const handleFullscreenChange = useCallback((active: boolean) => {
-    fullscreenActiveRef.current = active;
-  }, []);
+  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
   const handleVolumeChange = (val: number) => {
     setVolume(val);
@@ -256,13 +253,16 @@ function VideoFeed({
         <FeedItem
           key={v.id}
           video={v}
-          isActive={i === currentIndex}
+          isActive={fullscreenIndex !== null ? i === fullscreenIndex : i === currentIndex}
           volume={volume}
           onVolumeChange={handleVolumeChange}
           itemRef={el => { itemRefs.current[i] = el; }}
           onActivate={() => onCurrentChange(i)}
           onDelete={onDelete}
-          onFullscreenChange={handleFullscreenChange}
+          onFullscreenChange={(active) => {
+            fullscreenActiveRef.current = active;
+            setFullscreenIndex(active ? i : null);
+          }}
         />
       ))}
       {loading && (

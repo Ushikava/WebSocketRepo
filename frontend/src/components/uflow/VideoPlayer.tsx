@@ -144,11 +144,11 @@ function VideoPlayer({
             if (containerRef.current) containerRef.current.style.transition = '';
           }));
         }
-        requestAnimationFrame(() => {
-          savedScrollRef.current.forEach(({ el: scrollEl, top }) => {
-            if (scrollEl === document.documentElement) window.scrollTo(0, top);
-            else scrollEl.scrollTop = top;
-          });
+        // Restore scroll synchronously — a deferred RAF would be overridden
+        // by the tab-switch scroll reset (resetKey effect) if the user navigates away
+        savedScrollRef.current.forEach(({ el: scrollEl, top }) => {
+          if (scrollEl === document.documentElement) window.scrollTo(0, top);
+          else scrollEl.scrollTop = top;
         });
         onFullscreenChange?.(false);
       }

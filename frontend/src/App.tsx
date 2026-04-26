@@ -6,6 +6,7 @@ import CanvasPage, { PopupProvider } from './pages/CanvasPage';
 import UFlowAuthPage from './pages/UFlowAuthPage';
 import UFlowPage from './pages/UFlowPage';
 import VideoPage from './pages/VideoPage';
+import UFlowProfilePage from './pages/UFlowProfilePage';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 
 function AppTheme({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,7 @@ function App() {
           <Route path="/uflow/auth" element={<UFlowAuthPage />} />
           <Route path="/uflow/:tab" element={<UFlowPage />} />
           <Route path="/uflow/video/:slug" element={<VideoPage />} />
+          <Route path="/uflow/user/:username" element={<UFlowProfilePage />} />
         </Routes>
       </AppTheme>
     </LanguageProvider>

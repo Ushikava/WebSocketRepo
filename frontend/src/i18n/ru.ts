@@ -34,6 +34,12 @@ const ru: Record<TranslationKeys, string> = {
   videoNotFound: 'Видео не найдено',
   loadMore: 'Загрузить ещё',
 
+  // UFlowProfilePage
+  userNotFound: 'Пользователь не найден',
+  profileVideos: 'Видео',
+  profileViews: 'Просмотры',
+  profileLikes: 'Лайки',
+
   // UploadDialog
   uploadVideo: 'Загрузка видео',
   uploadSuccess: 'Видео успешно загружено!',
