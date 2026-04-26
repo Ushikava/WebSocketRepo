@@ -155,6 +155,13 @@ function VideoPlayer({
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           cursor: 'pointer',
           transition: 'width 0.3s, height 0.3s',
+          '&:fullscreen, &:-webkit-full-screen': {
+            width: '100vw',
+            height: '100vh',
+            borderRadius: 0,
+            border: 'none',
+            transition: 'none',
+          },
         }}
       >
         <video
