@@ -35,6 +35,7 @@ function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevVolumeRef = useRef(volume || 70);
+  const savedScrollRef = useRef<{ el: Element; top: number }[]>([]);
 
   const [showControls, setShowControls] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
@@ -118,6 +119,14 @@ function VideoPlayer({
       onFullscreenChange?.(false);
       document.exitFullscreen();
     } else {
+      const positions: { el: Element; top: number }[] = [];
+      let p: Element | null = el.parentElement;
+      while (p) {
+        if (p.scrollTop > 0) positions.push({ el: p, top: p.scrollTop });
+        p = p.parentElement;
+      }
+      if (window.scrollY > 0) positions.push({ el: document.documentElement, top: window.scrollY });
+      savedScrollRef.current = positions;
       onFullscreenChange?.(true);
       el.requestFullscreen();
     }
@@ -135,6 +144,12 @@ function VideoPlayer({
             if (containerRef.current) containerRef.current.style.transition = '';
           }));
         }
+        requestAnimationFrame(() => {
+          savedScrollRef.current.forEach(({ el: scrollEl, top }) => {
+            if (scrollEl === document.documentElement) window.scrollTo(0, top);
+            else scrollEl.scrollTop = top;
+          });
+        });
         onFullscreenChange?.(false);
       }
     };
