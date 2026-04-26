@@ -1,58 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
-import { Box, Typography, IconButton, CircularProgress, Slider } from '@mui/material';
+import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
 import Navbar from '../components/uflow/Navbar';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AuthPromptDialog from '../components/uflow/AuthPromptDialog';
 import BottomNav from '../components/uflow/BottomNav';
+import VideoPlayer from '../components/uflow/VideoPlayer';
 import { authFetch } from '../utils/authFetch';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-
-const MIN_W = 240;
-const MIN_H = 180;
-const MAX_W = 640;
-const MAX_H = 780;
-
-interface VideoItem {
-  id: number;
-  slug: string;
-  filename: string;
-  uploaded_by: string;
-  title: string;
-  uploaded_at: string;
-  views: number;
-  likes: number;
-  is_liked: boolean;
-}
-
-function formatViews(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
+import { type VideoItem, formatViews } from '../components/uflow/types';
 
 function VideoPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [video, setVideo] = useState<VideoItem | null>(null);
+  const [video, setVideo] = useState<Omit<VideoItem, 'url'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  const [playing, setPlaying] = useState(true);
+  const [playerW, setPlayerW] = useState(360);
   const [volume, setVolume] = useState(() => Number(localStorage.getItem('vj_volume') ?? 0));
-  const [showControls, setShowControls] = useState(false);
-  const [videoSize, setVideoSize] = useState({ w: 360, h: 600 });
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
@@ -68,7 +38,7 @@ function VideoPage() {
         setVideo(data);
         setLiked(data.is_liked);
         setLikesCount(data.likes);
-        if (!sessionStorage.getItem(`viewed_${data.id}`)) {
+        if (!sessionStorage.getItem(`viewed_${data.slug}`)) {
           sessionStorage.setItem(`viewed_${data.slug}`, '1');
           fetch(`/api/uflow/video/${data.slug}/view`, { method: 'POST' }).catch(() => {});
         }
@@ -76,43 +46,9 @@ function VideoPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const handleLoadedMetadata = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.volume = volume / 100;
-    v.muted = volume === 0;
-    const ratio = v.videoWidth / v.videoHeight;
-    let w = v.videoWidth;
-    let h = v.videoHeight;
-    if (w > MAX_W) { w = MAX_W; h = w / ratio; }
-    if (h > MAX_H) { h = MAX_H; w = h * ratio; }
-    if (w < MIN_W) { w = MIN_W; h = w / ratio; }
-    if (h < MIN_H) { h = MIN_H; w = h * ratio; }
-    setVideoSize({ w: Math.round(w), h: Math.round(h) });
-  };
-
-  const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play(); setPlaying(true); }
-    else { v.pause(); setPlaying(false); }
-  };
-
   const applyVolume = (val: number) => {
-    const v = videoRef.current;
-    if (v) { v.volume = val / 100; v.muted = val === 0; }
     setVolume(val);
     localStorage.setItem('vj_volume', String(val));
-  };
-
-  const handleVolumeChange = (_: Event, value: number | number[]) => applyVolume(value as number);
-
-  const toggleMute = () => applyVolume(volume === 0 ? 70 : 0);
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowControls(false), 2500);
   };
 
   const handleLike = () => {
@@ -132,11 +68,9 @@ function VideoPage() {
 
   return (
     <>
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '56px', md: 0 } }}>
-
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '56px', md: 0 } }}>
         <Navbar />
 
-        {/* Content */}
         <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4, pb: 6 }}>
           {loading && <CircularProgress sx={{ color: '#7C3AED', mt: 8 }} />}
 
@@ -146,72 +80,19 @@ function VideoPage() {
 
           {!loading && video && (
             <Box>
-              {/* Player */}
-              <Box sx={{ position: 'relative' }}>
-                <Box sx={{
-                  position: 'absolute', inset: -20,
-                  background: 'radial-gradient(ellipse at center, rgba(124,58,237,0.25) 0%, rgba(59,130,246,0.15) 50%, transparent 75%)',
-                  borderRadius: 4, filter: 'blur(20px)', zIndex: 0,
-                }} />
-
-                <Box
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={() => setShowControls(false)}
-                  sx={{
-                    position: 'relative', zIndex: 1,
-                    width: videoSize.w, height: videoSize.h,
-                    bgcolor: '#111', borderRadius: '16px',
-                    border: '2px solid #333', overflow: 'hidden',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                    cursor: 'pointer',
-                    transition: 'width 0.3s, height 0.3s',
-                  }}
-                >
-                  <video
-                    ref={videoRef}
-                    src={`/videos/${video.filename}`}
-                    autoPlay loop playsInline
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onClick={togglePlay}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                  />
-
-                  <Box sx={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-                    px: 1.5, pt: 4, pb: 1.5,
-                    opacity: showControls ? 1 : 0,
-                    transition: 'opacity 0.25s',
-                    pointerEvents: showControls ? 'auto' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
-                    <IconButton size="small" onClick={togglePlay} sx={{ color: '#fff', p: 0.5 }}>
-                      {playing ? <PauseIcon /> : <PlayArrowIcon />}
-                    </IconButton>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.5 }}>
-                        {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
-                      </IconButton>
-                      <Slider
-                        value={volume}
-                        onChange={handleVolumeChange}
-                        size="small"
-                        sx={{
-                          width: 70, color: '#fff', p: 0,
-                          '& .MuiSlider-thumb': { width: 10, height: 10, bgcolor: '#fff' },
-                          '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.3)' },
-                          '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff' },
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
+              <VideoPlayer
+                src={`/videos/${video.filename}`}
+                isActive={true}
+                volume={volume}
+                onVolumeChange={applyVolume}
+                onSizeChange={(w) => setPlayerW(w)}
+                maxW={640}
+                maxH={780}
+              />
 
               {/* Below video: title/author left, actions right */}
               <Box sx={{
-                width: videoSize.w,
+                width: playerW,
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                 mt: 1.5, gap: 1,
               }}>

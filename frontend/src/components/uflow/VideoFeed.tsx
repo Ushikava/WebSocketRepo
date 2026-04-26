@@ -1,44 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, CircularProgress, IconButton, Slider, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import AuthPromptDialog from './AuthPromptDialog';
+import VideoPlayer from './VideoPlayer';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { authFetch } from '../../utils/authFetch';
-
-const MIN_W = 240;
-const MIN_H = 180;
-const MAX_W = 420;
-const MAX_H = 600;
-
-export interface VideoItem {
-  id: number;
-  slug: string;
-  filename: string;
-  uploaded_by: string;
-  title: string;
-  uploaded_at: string;
-  views: number;
-  likes: number;
-  is_liked: boolean;
-  url: string;
-}
-
-function formatViews(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
+import { type VideoItem, formatViews } from './types';
 
 interface FeedItemProps {
   video: VideoItem;
@@ -53,13 +27,8 @@ interface FeedItemProps {
 
 function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate, onDelete, onFullscreenChange }: FeedItemProps) {
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const viewCounted = useRef(false);
-  const prevVolumeRef = useRef(volume || 70);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [showVolume, setShowVolume] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [videoSize, setVideoSize] = useState({ w: 300, h: 520 });
+  const [playerW, setPlayerW] = useState(300);
   const [liked, setLiked] = useState(video.is_liked);
   const [likesCount, setLikesCount] = useState(video.likes);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
@@ -69,86 +38,12 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
   const { t } = useLanguage();
 
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (isActive || isFullscreen) {
-      v.play().catch(() => {});
-      if (isActive && !viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
-        viewCounted.current = true;
-        sessionStorage.setItem(`viewed_${video.slug}`, '1');
-        fetch(`/api/uflow/video/${video.slug}/view`, { method: 'POST' }).catch(() => {});
-      }
-    } else {
-      v.pause();
+    if (isActive && !viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
+      viewCounted.current = true;
+      sessionStorage.setItem(`viewed_${video.slug}`, '1');
+      fetch(`/api/uflow/video/${video.slug}/view`, { method: 'POST' }).catch(() => {});
     }
-  }, [isActive, isFullscreen, video.id]);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.volume = volume / 100;
-    v.muted = volume === 0;
-  }, [volume]);
-
-  const handleLoadedMetadata = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    const ratio = v.videoWidth / v.videoHeight;
-    const maxW = Math.min(MAX_W, window.innerWidth - 32);
-    let w = v.videoWidth;
-    let h = v.videoHeight;
-    if (w > maxW) { w = maxW; h = w / ratio; }
-    if (h > MAX_H) { h = MAX_H; w = h * ratio; }
-    if (w < MIN_W) { w = MIN_W; h = w / ratio; }
-    if (h < MIN_H) { h = MIN_H; w = h * ratio; }
-    setVideoSize({ w: Math.round(w), h: Math.round(h) });
-  };
-
-  const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (!isActive && !isFullscreen) {
-      onActivate();
-      return;
-    }
-    if (v.paused) { v.play(); }
-    else { v.pause(); }
-  };
-
-  const handleVolumeChange = (_: Event, value: number | number[]) => {
-    onVolumeChange(value as number);
-  };
-
-  const toggleMute = () => {
-    if (volume === 0) {
-      onVolumeChange(prevVolumeRef.current);
-    } else {
-      prevVolumeRef.current = volume;
-      onVolumeChange(0);
-    }
-  };
-
-  const toggleFullscreen = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) {
-      onFullscreenChange(false);
-      document.exitFullscreen();
-    } else {
-      onFullscreenChange(true);
-      el.requestFullscreen();
-    }
-  };
-
-  useEffect(() => {
-    const onChange = () => {
-      const active = document.fullscreenElement === containerRef.current;
-      setIsFullscreen(active);
-      if (!document.fullscreenElement) onFullscreenChange(false);
-    };
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, [onFullscreenChange]);
+  }, [isActive, video.id]);
 
   const handleDelete = () => {
     setMenuAnchor(null);
@@ -183,156 +78,72 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
         borderBottom: 1, borderColor: 'divider',
       }}
     >
-      <Box sx={{ position: 'relative' }}>
-        {/* Glow */}
-        <Box sx={{
-          position: 'absolute', inset: -20,
-          background: 'radial-gradient(ellipse at center, rgba(124,58,237,0.25) 0%, rgba(59,130,246,0.15) 50%, transparent 75%)',
-          borderRadius: 4, filter: 'blur(20px)', zIndex: 0,
-        }} />
+      <VideoPlayer
+        src={video.url}
+        isActive={isActive}
+        volume={volume}
+        onVolumeChange={onVolumeChange}
+        onFullscreenChange={onFullscreenChange}
+        onActivate={onActivate}
+        onSizeChange={(w) => setPlayerW(w)}
+      />
 
-        {/* Player */}
-        <Box
-          ref={containerRef}
-          sx={{
-            position: 'relative', zIndex: 1,
-            width: videoSize.w, height: videoSize.h,
-            bgcolor: '#111', borderRadius: '16px',
-            border: '2px solid #333', overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            cursor: 'pointer',
-            transition: 'width 0.3s, height 0.3s',
-          }}
-        >
-          <video
-            ref={videoRef}
-            src={video.url}
-            loop playsInline
-            onLoadedMetadata={handleLoadedMetadata}
-            onClick={togglePlay}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-          />
-
-          {/* Gradient */}
-          <Box sx={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: 56,
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
-            pointerEvents: 'none',
-          }} />
-
-          {/* Fullscreen button — bottom right */}
-          <IconButton
-            size="small"
-            onClick={toggleFullscreen}
-            sx={{
-              position: 'absolute', bottom: 10, right: 10, zIndex: 2,
-              bgcolor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(4px)',
-              color: '#fff', p: 0.5,
-              borderRadius: 2,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
-            }}
+      {/* Below-video row: title/author left, actions right */}
+      <Box sx={{
+        width: playerW,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        mt: 1.5, gap: 1,
+      }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            fontWeight="bold" fontSize={14} noWrap
+            onClick={() => navigate(`/uflow/video/${video.slug}`)}
+            sx={{ cursor: 'pointer', '&:hover': { color: '#7C3AED', textDecoration: 'underline' } }}
           >
-            {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-          </IconButton>
-
-          {/* Volume pill — bottom left, slides out on hover */}
-          <Box
-            onMouseEnter={() => setShowVolume(true)}
-            onMouseLeave={() => setShowVolume(false)}
-            sx={{
-              position: 'absolute', bottom: 10, left: 10, zIndex: 2,
-              display: 'flex', alignItems: 'center',
-              bgcolor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: 3,
-              px: 0.75, py: 0.25,
-              overflow: 'hidden',
-            }}
-          >
-            <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.25, flexShrink: 0 }}>
-              {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
-            </IconButton>
-            <Box sx={{
-              width: showVolume ? 80 : 0,
-              opacity: showVolume ? 1 : 0,
-              ml: showVolume ? 0.5 : 0,
-              pointerEvents: showVolume ? 'auto' : 'none',
-              transition: 'width 0.25s ease, opacity 0.2s ease, margin 0.25s ease',
-              display: 'flex', alignItems: 'center',
-            }}>
-              <Slider
-                value={volume}
-                onChange={handleVolumeChange}
-                size="small"
-                sx={{
-                  width: 72, color: '#fff', p: 0, mx: 0.5, flexShrink: 0,
-                  '& .MuiSlider-thumb': { display: 'none' },
-                  '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.25)', opacity: 1 },
-                  '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff', borderRadius: 2 },
-                }}
-              />
-            </Box>
-          </Box>
+            {video.title}
+          </Typography>
+          <Typography fontSize={12} color="text.secondary">@{video.uploaded_by}</Typography>
         </Box>
 
-        {/* Below-video row: title/author left, actions right */}
-        <Box sx={{
-          position: 'relative', zIndex: 1,
-          width: videoSize.w,
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-          mt: 1.5, gap: 1,
-        }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              fontWeight="bold" fontSize={14} noWrap
-              onClick={() => navigate(`/uflow/video/${video.slug}`)}
-              sx={{ cursor: 'pointer', '&:hover': { color: '#7C3AED', textDecoration: 'underline' } }}
-            >
-              {video.title}
-            </Typography>
-            <Typography fontSize={12} color="text.secondary">@{video.uploaded_by}</Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-            <VisibilityIcon sx={{ fontSize: 15, color: '#bbb' }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          <VisibilityIcon sx={{ fontSize: 15, color: '#bbb' }} />
+          <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
+            {formatViews(video.views)}
+          </Typography>
+          <IconButton size="small" onClick={handleLike} sx={{ color: liked ? '#E91E63' : '#aaa', '&:hover': { color: '#E91E63' } }}>
+            {liked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+          </IconButton>
+          {likesCount > 0 && (
             <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
-              {formatViews(video.views)}
+              {formatViews(likesCount)}
             </Typography>
-            <IconButton size="small" onClick={handleLike} sx={{ color: liked ? '#E91E63' : '#aaa', '&:hover': { color: '#E91E63' } }}>
-              {liked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
-            </IconButton>
-            {likesCount > 0 && (
-              <Typography fontSize={12} color="text.disabled" sx={{ mr: 0.5 }}>
-                {formatViews(likesCount)}
-              </Typography>
-            )}
-            <IconButton size="small" sx={{ color: '#aaa', '&:hover': { color: '#7C3AED' } }}>
-              <ShareIcon fontSize="small" />
-            </IconButton>
-            {isAuthor && (
-              <>
-                <IconButton size="small" onClick={e => setMenuAnchor(e.currentTarget)} sx={{ color: '#aaa', '&:hover': { color: 'text.primary' } }}>
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-                <Menu
-                  anchorEl={menuAnchor}
-                  open={!!menuAnchor}
-                  onClose={() => setMenuAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                  slotProps={{ paper: { sx: { borderRadius: 2, minWidth: 150 } } }}
-                >
-                  <MenuItem onClick={handleDelete} sx={{ color: '#f44336' }}>
-                    <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
-                    <ListItemText primary={t('deleteVideo')} primaryTypographyProps={{ fontSize: 14 }} />
-                  </MenuItem>
-                </Menu>
-              </>
-            )}
-          </Box>
+          )}
+          <IconButton size="small" sx={{ color: '#aaa', '&:hover': { color: '#7C3AED' } }}>
+            <ShareIcon fontSize="small" />
+          </IconButton>
+          {isAuthor && (
+            <>
+              <IconButton size="small" onClick={e => setMenuAnchor(e.currentTarget)} sx={{ color: '#aaa', '&:hover': { color: 'text.primary' } }}>
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+              <Menu
+                anchorEl={menuAnchor}
+                open={!!menuAnchor}
+                onClose={() => setMenuAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                slotProps={{ paper: { sx: { borderRadius: 2, minWidth: 150 } } }}
+              >
+                <MenuItem onClick={handleDelete} sx={{ color: '#f44336' }}>
+                  <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
+                  <ListItemText primary={t('deleteVideo')} primaryTypographyProps={{ fontSize: 14 }} />
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Box>
       </Box>
+
       <AuthPromptDialog open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} />
     </Box>
   );
@@ -393,18 +204,15 @@ function VideoFeed({
     rafRef.current = requestAnimationFrame(findMostVisible);
   }, [findMostVisible]);
 
-  // Scroll to top on tab switch (full reload)
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
   }, [resetKey]);
 
-  // Scroll to item when VideoList is clicked
   useEffect(() => {
     if (!scrollTarget) return;
     itemRefs.current[scrollTarget.index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [scrollTarget]);
 
-  // Load more when last item becomes visible
   useEffect(() => {
     const lastEl = itemRefs.current[videos.length - 1];
     if (!lastEl || !hasMore) return;

@@ -8,7 +8,7 @@ import Sidebar from '../components/uflow/Sidebar';
 import VideoFeed from '../components/uflow/VideoFeed';
 import UploadDialog from '../components/uflow/UploadDialog';
 import BottomNav from '../components/uflow/BottomNav';
-import type { VideoItem } from '../components/uflow/VideoFeed';
+import type { VideoItem } from '../components/uflow/types';
 
 const LIMIT = 15;
 
