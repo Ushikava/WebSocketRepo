@@ -78,16 +78,20 @@ function Navbar({ onUploadClick }: NavbarProps) {
           </Typography>
         </Box>
 
-        {/* Search — hidden on mobile */}
+        {/* Search — hidden on mobile, fixed vw width */}
         <Box sx={{
-          display: { xs: 'none', md: 'flex' }, alignItems: 'center', flex: 1,
-          mx: 4, bgcolor: 'action.hover', borderRadius: 3,
-          px: 2, py: 0.75, border: 1, borderColor: 'divider',
+          display: { xs: 'none', md: 'flex' }, alignItems: 'center',
+          width: '25vw', maxWidth: 360, minWidth: 180,
+          ml: 3, bgcolor: 'action.hover', borderRadius: 3,
+          px: 2, py: 0.75, border: 1, borderColor: 'divider', flexShrink: 0,
         }}>
           <SearchIcon sx={{ color: 'text.disabled', mr: 1, fontSize: 20 }} />
           <InputBase placeholder={t('searchPlaceholder')} sx={{ flex: 1, fontSize: 14 }} />
           <TuneIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
         </Box>
+
+        {/* Spacer — absorbs remaining space, invisible */}
+        <Box sx={{ flex: 1 }} />
 
         {/* Search icon on mobile */}
         <IconButton
@@ -98,11 +102,8 @@ function Navbar({ onUploadClick }: NavbarProps) {
           <SearchIcon fontSize="small" />
         </IconButton>
 
-        {/* Spacer on mobile */}
-        <Box sx={{ flex: 1, display: { xs: 'block', md: 'none' } }} />
-
         {/* Right controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 }, flexShrink: 0 }}>
           <Tooltip title={t('settingsTitle')}>
             <IconButton size="small" onClick={e => setSettingsAnchor(e.currentTarget)} sx={{ color: 'text.secondary' }}>
               <SettingsIcon fontSize="small" />
@@ -118,13 +119,14 @@ function Navbar({ onUploadClick }: NavbarProps) {
           {/* Upload: full button on desktop, icon-only on mobile */}
           <Button
             variant="contained"
+            size="small"
             onClick={handleUploadClick}
-            startIcon={<BoltIcon fontSize="small" />}
+            startIcon={<BoltIcon sx={{ fontSize: 16 }} />}
             sx={{
               display: { xs: 'none', sm: 'flex' },
               background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
               borderRadius: 3, textTransform: 'none', fontWeight: 'bold',
-              px: 2.5, boxShadow: '0 4px 15px rgba(124,58,237,0.35)',
+              px: 2, py: 1, width: 132, boxShadow: '0 4px 15px rgba(124,58,237,0.35)',
               '&:hover': { background: 'linear-gradient(135deg, #6D28D9, #2563EB)' },
             }}
           >
@@ -169,30 +171,31 @@ function Navbar({ onUploadClick }: NavbarProps) {
               >
                 <MenuItem onClick={() => { setUserMenuAnchor(null); handleProfilePage(); }} sx={{ color: '#ffffff' }}>
                   <ListItemIcon><PersonOutlineIcon fontSize="small" /></ListItemIcon>
-                  <ListItemText primary={t('profile')} primaryTypographyProps={{ fontSize: 14 }} />
+                  <ListItemText primary={t('profile')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
                 <MenuItem onClick={() => setUserMenuAnchor(null)} disabled>
                   <ListItemIcon><VideoLibraryIcon fontSize="small" /></ListItemIcon>
-                  <ListItemText primary={t('myVideos')} primaryTypographyProps={{ fontSize: 14 }} />
+                  <ListItemText primary={t('myVideos')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
                 <MenuItem onClick={() => setUserMenuAnchor(null)} disabled>
                   <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
-                  <ListItemText primary={t('settings')} primaryTypographyProps={{ fontSize: 14 }} />
+                  <ListItemText primary={t('settings')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={() => { setUserMenuAnchor(null); handleLogout(); }} sx={{ color: '#f44336' }}>
                   <ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
-                  <ListItemText primary={t('logout')} primaryTypographyProps={{ fontSize: 14 }} />
+                  <ListItemText primary={t('logout')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
               </Menu>
             </>
           ) : (
             <Button
               variant="outlined"
+              size="small"
               onClick={() => navigate('/uflow/auth')}
               sx={{
                 borderColor: '#7C3AED', color: '#7C3AED', borderRadius: 3,
-                textTransform: 'none', fontWeight: 'bold',
+                textTransform: 'none', fontWeight: 'bold', px: 2, py: 1, width: 80,
                 '&:hover': { bgcolor: 'action.selected', borderColor: '#6D28D9' },
               }}
             >
@@ -206,7 +209,7 @@ function Navbar({ onUploadClick }: NavbarProps) {
             onClose={() => setSettingsAnchor(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            slotProps={{ paper: { sx: { borderRadius: 3, mt: 1, minWidth: 200, p: 2 } } }}
+            slotProps={{ paper: { sx: { borderRadius: 3, mt: 1, width: 220, p: 2 } } }}
           >
             <Typography fontSize={11} color="text.secondary" fontWeight="bold" mb={1}>
               {t('languageLabel').toUpperCase()}

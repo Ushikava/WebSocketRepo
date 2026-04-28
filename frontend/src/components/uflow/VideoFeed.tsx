@@ -140,7 +140,7 @@ function FeedItem({ video, index, isActive, volume, onVolumeChange, itemRef, onA
               >
                 <MenuItem onClick={handleDelete} sx={{ color: '#f44336' }}>
                   <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
-                  <ListItemText primary={t('deleteVideo')} primaryTypographyProps={{ fontSize: 14 }} />
+                  <ListItemText primary={t('deleteVideo')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
               </Menu>
             </>
