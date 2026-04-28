@@ -47,4 +47,7 @@ app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="asse
 
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str = "") -> FileResponse:
+    file_path = DIST_DIR / full_path
+    if file_path.is_file():
+        return FileResponse(str(file_path))
     return FileResponse(str(DIST_DIR / "index.html"))
