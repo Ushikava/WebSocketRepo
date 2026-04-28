@@ -15,7 +15,7 @@ interface VideoPlayerProps {
   onVolumeChange: (v: number) => void;
   onFullscreenChange?: (active: boolean) => void;
   onActivate?: () => void;
-  onSizeChange?: (w: number, h: number) => void;
+  onSizeChange?: (w: number) => void;
   maxW?: number;
   maxH?: number;
 }
@@ -36,6 +36,7 @@ function VideoPlayer({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevVolumeRef = useRef(volume || 70);
   const savedScrollRef = useRef<{ el: Element; top: number }[]>([]);
+  const isFullscreenRef = useRef(false);
 
   const [showControls, setShowControls] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
@@ -45,9 +46,9 @@ function VideoPlayer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (isActive || isFullscreen) { v.play().catch(() => {}); }
+    if (isActive) { v.play().catch(() => {}); }
     else { v.pause(); }
-  }, [isActive, isFullscreen]);
+  }, [isActive]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -70,15 +71,15 @@ function VideoPlayer({
     const fw = Math.round(w);
     const fh = Math.round(h);
     setVideoSize({ w: fw, h: fh });
-    onSizeChange?.(fw, fh);
+    onSizeChange?.(fw);
   }, [maxW, maxH, onSizeChange]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (!isActive && !isFullscreen) { onActivate?.(); return; }
+    if (!isActive && !isFullscreenRef.current) { onActivate?.(); return; }
     if (v.paused) { v.play(); } else { v.pause(); }
-  };
+  }, [isActive, onActivate]);
 
   const handleMouseMove = useCallback(() => {
     setShowControls(true);
@@ -108,15 +109,14 @@ function VideoPlayer({
     }
   }, [volume, onVolumeChange]);
 
-  const handleVolumeSlider = (_: Event, value: number | number[]) => {
+  const handleVolumeSlider = useCallback((_: Event, value: number | number[]) => {
     onVolumeChange(value as number);
-  };
+  }, [onVolumeChange]);
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     if (document.fullscreenElement) {
-      onFullscreenChange?.(false);
       document.exitFullscreen();
     } else {
       const positions: { el: Element; top: number }[] = [];
@@ -135,8 +135,14 @@ function VideoPlayer({
   useEffect(() => {
     const onChange = () => {
       const active = document.fullscreenElement === containerRef.current;
+      const wasFullscreen = isFullscreenRef.current;
+      isFullscreenRef.current = active;
       setIsFullscreen(active);
-      if (!active) {
+
+      // Only the player that WAS in fullscreen handles the exit logic.
+      // Without this guard every other player in the feed would also fire
+      // onFullscreenChange(false) on the same event, resetting fullscreenIndex.
+      if (!active && wasFullscreen) {
         const el = containerRef.current;
         if (el) {
           el.style.transition = 'none';

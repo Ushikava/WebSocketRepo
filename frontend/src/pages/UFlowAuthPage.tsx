@@ -117,9 +117,7 @@ function UFlowAuthPage() {
       <CssBaseline />
       <GradientBox sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <Paper elevation={6} sx={{ p: 3, borderRadius: 3, width: 320, textAlign: 'center' }}>
-          <Typography variant="h6" fontWeight="bold" mb={1}>
-            UFlow
-          </Typography>
+          <Box component="img" src="/logo.png" alt="UFlow" sx={{ height: 48, width: 'auto', mb: 1 }} />
 
           <Tabs
             value={tab}

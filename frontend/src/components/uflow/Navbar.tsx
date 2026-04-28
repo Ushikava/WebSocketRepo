@@ -4,7 +4,6 @@ import {
   Box, Typography, Button, IconButton, InputBase,
   Avatar, Tooltip, Popover, Switch, Divider, Menu, MenuItem, ListItemIcon, ListItemText,
 } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import BoltIcon from '@mui/icons-material/Bolt';
@@ -68,13 +67,7 @@ function Navbar({ onUploadClick }: NavbarProps) {
           onClick={() => navigate('/uflow')}
           sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: { xs: 1, md: 3 }, flexShrink: 0, cursor: 'pointer' }}
         >
-          <Box sx={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <PlayArrowIcon sx={{ color: '#fff', fontSize: 18 }} />
-          </Box>
+          <Box component="img" src="/logo.png" alt="UFlow" sx={{ height: 32, width: 'auto' }} />
           <Typography fontWeight="bold" fontSize={18} sx={{ display: { xs: 'none', sm: 'block' } }}>
             UFlow
           </Typography>
