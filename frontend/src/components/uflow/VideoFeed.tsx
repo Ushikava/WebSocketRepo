@@ -79,7 +79,7 @@ function FeedItem({ video, index, isActive, volume, onVolumeChange, itemRef, onA
         alignItems: 'center',
         py: { xs: 1.5, md: 3 },
         px: { xs: 1, md: 0 },
-        borderBottom: 1, borderColor: 'divider',
+        //borderBottom: 1, borderColor: 'divider',
       }}
     >
       <VideoPlayer

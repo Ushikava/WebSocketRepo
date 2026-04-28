@@ -53,6 +53,11 @@ function Navbar({ onUploadClick }: NavbarProps) {
     navigate('/uflow/auth');
   };
 
+  const handleProfilePage = () => {
+    const username = localStorage.getItem('vj_username');
+    if (username) navigate(`/uflow/user/${username}`);
+  };
+
   return (
     <>
       <Box sx={{
@@ -162,7 +167,7 @@ function Navbar({ onUploadClick }: NavbarProps) {
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 slotProps={{ paper: { sx: { borderRadius: 3, mt: 1, minWidth: 180 } } }}
               >
-                <MenuItem onClick={() => setUserMenuAnchor(null)} disabled>
+                <MenuItem onClick={() => { setUserMenuAnchor(null); handleProfilePage(); }} sx={{ color: '#ffffff' }}>
                   <ListItemIcon><PersonOutlineIcon fontSize="small" /></ListItemIcon>
                   <ListItemText primary={t('profile')} primaryTypographyProps={{ fontSize: 14 }} />
                 </MenuItem>

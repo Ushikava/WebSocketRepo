@@ -2,6 +2,7 @@ import os
 import secrets
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from models.video import UploadedVideos, VideoStats, VideoLike
 from models.user import UserData
 
@@ -45,6 +46,27 @@ def get_all_video(db: Session, offset: int = 0, limit: int = 20, current_user: i
         db.query(UploadedVideos, VideoStats.views, VideoStats.likes, UserData.username)
         .join(VideoStats, VideoStats.video_id == UploadedVideos.id, isouter=True)
         .join(UserData, UserData.id == UploadedVideos.uploaded_by)
+        .order_by(UploadedVideos.uploaded_at.desc())
+        .offset(offset).limit(limit).all()
+    )
+    result = []
+    for v, views, likes, uname in rows:
+        is_liked = False
+        if current_user:
+            is_liked = db.query(VideoLike).filter(
+                VideoLike.video_id == v.id,
+                VideoLike.user_id == current_user,
+            ).first() is not None
+        result.append(_row_to_dict(v, uname, views, likes, is_liked))
+    return result
+
+
+def get_all_video_by_user(db: Session, username: str, offset: int = 0, limit: int = 20, current_user: int = None):
+    rows = (
+        db.query(UploadedVideos, VideoStats.views, VideoStats.likes, UserData.username)
+        .join(VideoStats, VideoStats.video_id == UploadedVideos.id, isouter=True)
+        .join(UserData, UserData.id == UploadedVideos.uploaded_by)
+        .where(UserData.username == username)
         .order_by(UploadedVideos.uploaded_at.desc())
         .offset(offset).limit(limit).all()
     )
@@ -112,6 +134,7 @@ def toggle_like(db: Session, slug: str, user_id: int) -> dict:
         db.commit()
         return {"is_liked": True, "likes": stats.likes if stats else 1}
 
+
 def delete_video(db: Session, slug: str, user_id: int):
     video = db.query(UploadedVideos).filter(UploadedVideos.slug == slug).first()
     if not video:
@@ -141,3 +164,22 @@ def get_all_liked_video(db: Session, offset: int = 0, limit: int = 20, current_u
         .offset(offset).limit(limit).all()
     )
     return [_row_to_dict(v, uname, views, likes, is_liked=True) for v, views, likes, uname in rows]
+
+
+def get_user_info(db: Session, username: str, current_user: int = None) -> dict:
+    stats = (
+        db.query(func.sum(VideoStats.views).label("total_views"),
+                 func.sum(VideoStats.likes).label("total_likes"),
+                 func.count(VideoStats.id).label("video_count"))
+        .select_from(UploadedVideos)
+        .join(VideoStats, VideoStats.video_id == UploadedVideos.id, isouter=True)
+        .join(UserData, UserData.id == UploadedVideos.uploaded_by)
+        .where(UserData.username == username).first()
+    )
+
+    return {
+        "username": username,
+        "video_count": stats.video_count,
+        "total_views": stats.total_views,
+        "total_likes": stats.total_likes
+        }

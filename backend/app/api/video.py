@@ -119,3 +119,28 @@ async def like_video(slug: str, current_user: str = Depends(get_user_from_token)
     finally:
         db.close()
     return result
+
+
+@router.get("/user/{username}")
+async def choose_video(username: str, current_user: str = Depends(get_optional_user)):
+    db = SessionLocal()
+    try:
+        user_info = video_db.get_user_info(db, username, current_user=current_user)
+    finally:
+        db.close()
+    return user_info
+
+
+@router.get("/user/{username}/videos")
+async def list_videos(
+    username: str,
+    offset: int = 0,
+    limit: int = 20,
+    current_user: str = Depends(get_optional_user),
+):
+    db = SessionLocal()
+    try:
+        videos_list = video_db.get_all_video_by_user(db, username=username, offset=offset, limit=limit, current_user=current_user)
+    finally:
+        db.close()
+    return videos_list
