@@ -89,7 +89,6 @@ function UFlowPage() {
         <VideoFeed
           videos={videos}
           currentIndex={currentIndex}
-          scrollTarget={null}
           onCurrentChange={setCurrentIndex}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}

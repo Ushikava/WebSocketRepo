@@ -16,16 +16,17 @@ import { type VideoItem, formatViews } from './types';
 
 interface FeedItemProps {
   video: VideoItem;
+  index: number;
   isActive: boolean;
   volume: number;
   onVolumeChange: (v: number) => void;
   itemRef: (el: HTMLDivElement | null) => void;
-  onActivate: () => void;
+  onActivate: (index: number) => void;
   onDelete: (id: number) => void;
-  onFullscreenChange: (active: boolean) => void;
+  onFullscreenChange: (index: number, active: boolean) => void;
 }
 
-function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate, onDelete, onFullscreenChange }: FeedItemProps) {
+function FeedItem({ video, index, isActive, volume, onVolumeChange, itemRef, onActivate, onDelete, onFullscreenChange }: FeedItemProps) {
   const navigate = useNavigate();
   const viewCounted = useRef(false);
   const [playerW, setPlayerW] = useState(300);
@@ -36,6 +37,9 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
 
   const isAuthor = localStorage.getItem('vj_username') === video.uploaded_by;
   const { t } = useLanguage();
+
+  const handleActivate = useCallback(() => onActivate(index), [index, onActivate]);
+  const handleFullscreenChange = useCallback((active: boolean) => onFullscreenChange(index, active), [index, onFullscreenChange]);
 
   useEffect(() => {
     if (isActive && !viewCounted.current && !sessionStorage.getItem(`viewed_${video.slug}`)) {
@@ -83,9 +87,9 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
         isActive={isActive}
         volume={volume}
         onVolumeChange={onVolumeChange}
-        onFullscreenChange={onFullscreenChange}
-        onActivate={onActivate}
-        onSizeChange={(w) => setPlayerW(w)}
+        onFullscreenChange={handleFullscreenChange}
+        onActivate={handleActivate}
+        onSizeChange={setPlayerW}
       />
 
       {/* Below-video row: title/author left, actions right */}
@@ -152,7 +156,6 @@ function FeedItem({ video, isActive, volume, onVolumeChange, itemRef, onActivate
 interface VideoFeedProps {
   videos: VideoItem[];
   currentIndex: number;
-  scrollTarget: { index: number; token: number } | null;
   onCurrentChange: (index: number) => void;
   onLoadMore: () => void;
   hasMore: boolean;
@@ -163,7 +166,7 @@ interface VideoFeedProps {
 }
 
 function VideoFeed({
-  videos, currentIndex, scrollTarget, onCurrentChange,
+  videos, currentIndex, onCurrentChange,
   onLoadMore, hasMore, loading, onUploadClick, resetKey, onDelete,
 }: VideoFeedProps) {
   const { t } = useLanguage();
@@ -174,10 +177,15 @@ function VideoFeed({
   const [volume, setVolume] = useState(() => Number(localStorage.getItem('vj_volume') ?? 0));
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
-  const handleVolumeChange = (val: number) => {
+  const handleVolumeChange = useCallback((val: number) => {
     setVolume(val);
     localStorage.setItem('vj_volume', String(val));
-  };
+  }, []);
+
+  const handleFullscreenChange = useCallback((index: number, active: boolean) => {
+    fullscreenActiveRef.current = active;
+    setFullscreenIndex(active ? index : null);
+  }, []);
 
   const findMostVisible = useCallback(() => {
     const container = scrollRef.current;
@@ -206,9 +214,8 @@ function VideoFeed({
   }, [resetKey]);
 
   useEffect(() => {
-    if (!scrollTarget) return;
-    itemRefs.current[scrollTarget.index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [scrollTarget]);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+  }, []);
 
   useEffect(() => {
     const lastEl = itemRefs.current[videos.length - 1];
@@ -253,16 +260,14 @@ function VideoFeed({
         <FeedItem
           key={v.id}
           video={v}
+          index={i}
           isActive={fullscreenIndex !== null ? i === fullscreenIndex : i === currentIndex}
           volume={volume}
           onVolumeChange={handleVolumeChange}
           itemRef={el => { itemRefs.current[i] = el; }}
-          onActivate={() => onCurrentChange(i)}
+          onActivate={onCurrentChange}
           onDelete={onDelete}
-          onFullscreenChange={(active) => {
-            fullscreenActiveRef.current = active;
-            setFullscreenIndex(active ? i : null);
-          }}
+          onFullscreenChange={handleFullscreenChange}
         />
       ))}
       {loading && (
