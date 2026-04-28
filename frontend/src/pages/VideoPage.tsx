@@ -86,8 +86,6 @@ function VideoPage() {
                 volume={volume}
                 onVolumeChange={applyVolume}
                 onSizeChange={(w) => setPlayerW(w)}
-                maxW={640}
-                maxH={780}
               />
 
               {/* Below video: title/author left, actions right */}
