@@ -176,6 +176,11 @@ function VideoFeed({
   const fullscreenActiveRef = useRef(false);
   const [volume, setVolume] = useState(() => Number(localStorage.getItem('vj_volume') ?? 0));
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const [spacerBlocks, setSpacerBlocks] = useState(1);
+  const lastReachedRef = useRef(false);
+  const lastSpacerRef = useRef<HTMLDivElement>(null);
+  const videosLengthRef = useRef(videos.length);
+  useEffect(() => { videosLengthRef.current = videos.length; }, [videos.length]);
 
   const handleVolumeChange = useCallback((val: number) => {
     setVolume(val);
@@ -187,27 +192,42 @@ function VideoFeed({
     setFullscreenIndex(active ? index : null);
   }, []);
 
-  const findMostVisible = useCallback(() => {
+  const findTopmost = useCallback(() => {
     const container = scrollRef.current;
     if (!container) return;
     const cTop = container.getBoundingClientRect().top;
     const cBottom = cTop + container.clientHeight;
-    let bestIndex = 0;
-    let bestPx = -1;
-    itemRefs.current.forEach((el, i) => {
-      if (!el) return;
+    for (let i = 0; i < itemRefs.current.length; i++) {
+      const el = itemRefs.current[i];
+      if (!el) continue;
       const r = el.getBoundingClientRect();
-      const visiblePx = Math.max(0, Math.min(r.bottom, cBottom) - Math.max(r.top, cTop));
-      if (visiblePx > bestPx) { bestPx = visiblePx; bestIndex = i; }
-    });
-    onCurrentChange(bestIndex);
+      const center = (r.top + r.bottom) / 2;
+      if (center >= cTop && center <= cBottom) {
+        if (i === videosLengthRef.current - 1) lastReachedRef.current = true;
+        onCurrentChange(i);
+        return;
+      }
+    }
   }, [onCurrentChange]);
+
+  // When last spacer block becomes visible and last video hasn't played yet — add another block
+  useEffect(() => {
+    const el = lastSpacerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !lastReachedRef.current) {
+        setSpacerBlocks(n => n + 1);
+      }
+    }, { threshold: 0.1 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [spacerBlocks]);
 
   const handleScroll = useCallback(() => {
     if (fullscreenActiveRef.current) return;
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(findMostVisible);
-  }, [findMostVisible]);
+    rafRef.current = requestAnimationFrame(findTopmost);
+  }, [findTopmost]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
@@ -268,6 +288,13 @@ function VideoFeed({
           onActivate={onCurrentChange}
           onDelete={onDelete}
           onFullscreenChange={handleFullscreenChange}
+        />
+      ))}
+      {videos.length > 0 && Array.from({ length: spacerBlocks }, (_, i) => (
+        <Box
+          key={i}
+          ref={i === spacerBlocks - 1 ? lastSpacerRef : undefined}
+          sx={{ height: '80vh', flexShrink: 0 }}
         />
       ))}
       {loading && (
