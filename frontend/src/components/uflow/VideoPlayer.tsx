@@ -5,8 +5,8 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
-const MIN_W = 240;
-const MIN_H = 180;
+const MAX_W = 640;
+const MAX_H = 480;
 
 interface VideoPlayerProps {
   src: string;
@@ -16,8 +16,6 @@ interface VideoPlayerProps {
   onFullscreenChange?: (active: boolean) => void;
   onActivate?: () => void;
   onSizeChange?: (w: number) => void;
-  maxW?: number;
-  maxH?: number;
 }
 
 function VideoPlayer({
@@ -28,8 +26,6 @@ function VideoPlayer({
   onFullscreenChange,
   onActivate,
   onSizeChange,
-  maxW = 420,
-  maxH = 600,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,10 +34,10 @@ function VideoPlayer({
   const savedScrollRef = useRef<{ el: Element; top: number }[]>([]);
   const isFullscreenRef = useRef(false);
 
+  const [videoSize, setVideoSize] = useState({ w: MAX_W, h: Math.round(MAX_W * 9 / 16) });
   const [showControls, setShowControls] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [videoSize, setVideoSize] = useState({ w: 300, h: 520 });
 
   useEffect(() => {
     const v = videoRef.current;
@@ -60,19 +56,18 @@ function VideoPlayer({
   const handleLoadedMetadata = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    const ratio = v.videoWidth / v.videoHeight;
-    const effectiveMaxW = Math.min(maxW, window.innerWidth - 32);
-    let w = v.videoWidth;
-    let h = v.videoHeight;
-    if (w > effectiveMaxW) { w = effectiveMaxW; h = w / ratio; }
-    if (h > maxH) { h = maxH; w = h * ratio; }
-    if (w < MIN_W) { w = MIN_W; h = w / ratio; }
-    if (h < MIN_H) { h = MIN_H; w = h * ratio; }
-    const fw = Math.round(w);
-    const fh = Math.round(h);
-    setVideoSize({ w: fw, h: fh });
-    onSizeChange?.(fw);
-  }, [maxW, maxH, onSizeChange]);
+    const { videoWidth: vw, videoHeight: vh } = v;
+    let w: number, h: number;
+    if (MAX_W * vh / vw <= MAX_H) {
+      w = MAX_W;
+      h = Math.round(MAX_W * vh / vw);
+    } else {
+      h = MAX_H;
+      w = Math.round(MAX_H * vw / vh);
+    }
+    setVideoSize({ w, h });
+    onSizeChange?.(MAX_W);
+  }, [onSizeChange]);
 
   const handleClick = useCallback(() => {
     const v = videoRef.current;
@@ -139,9 +134,6 @@ function VideoPlayer({
       isFullscreenRef.current = active;
       setIsFullscreen(active);
 
-      // Only the player that WAS in fullscreen handles the exit logic.
-      // Without this guard every other player in the feed would also fire
-      // onFullscreenChange(false) on the same event, resetting fullscreenIndex.
       if (!active && wasFullscreen) {
         const el = containerRef.current;
         if (el) {
@@ -150,8 +142,7 @@ function VideoPlayer({
             if (containerRef.current) containerRef.current.style.transition = '';
           }));
         }
-        // Restore scroll synchronously — a deferred RAF would be overridden
-        // by the tab-switch scroll reset (resetKey effect) if the user navigates away
+        
         savedScrollRef.current.forEach(({ el: scrollEl, top }) => {
           if (scrollEl === document.documentElement) window.scrollTo(0, top);
           else scrollEl.scrollTop = top;
@@ -172,104 +163,112 @@ function VideoPlayer({
         borderRadius: 4, filter: 'blur(20px)', zIndex: 0,
       }} />
 
-      {/* Player */}
+      {/* Outer player frame */}
       <Box
         ref={containerRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
         sx={{
           position: 'relative', zIndex: 1,
-          width: videoSize.w, height: videoSize.h,
-          bgcolor: '#111', borderRadius: '16px',
+          width: MAX_W, height: videoSize.h,
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0B0B14' : '#E8E9F5',
+          borderRadius: '16px',
           border: '2px solid #333', overflow: 'hidden',
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          cursor: 'pointer',
-          transition: 'width 0.3s, height 0.3s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           '&:fullscreen, &:-webkit-full-screen': {
-            width: '100vw',
-            height: '100vh',
-            borderRadius: 0,
-            border: 'none',
-            transition: 'none',
+            width: '100vw', height: '100vh',
+            borderRadius: 0, border: 'none', transition: 'none',
           },
         }}
       >
-        <video
-          ref={videoRef}
-          src={src}
-          loop playsInline
-          onLoadedMetadata={handleLoadedMetadata}
-          onClick={handleClick}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-        />
-
-        {/* Bottom gradient*/}
-        <Box sx={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 56,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
-          pointerEvents: 'none',
-          opacity: showControls ? 1 : 0,
-          transition: 'opacity 0.25s',
-        }} />
-
-        {/* Fullscreen button*/}
-        <IconButton
-          size="small"
-          onClick={toggleFullscreen}
-          sx={{
-            position: 'absolute', bottom: 10, right: 10, zIndex: 2,
-            bgcolor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            color: '#fff', p: 0.5,
-            borderRadius: 2,
-            opacity: showControls ? 1 : 0,
-            pointerEvents: showControls ? 'auto' : 'none',
-            transition: 'opacity 0.25s',
-            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
-          }}
-        >
-          {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-        </IconButton>
-
-        {/* Volume pill*/}
+        {/* Inner video zone */}
         <Box
-          onMouseEnter={() => setShowVolume(true)}
-          onMouseLeave={() => setShowVolume(false)}
+          onClick={handleClick}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
           sx={{
-            position: 'absolute', bottom: 10, left: 10, zIndex: 2,
-            display: 'flex', alignItems: 'center',
-            bgcolor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            borderRadius: 3,
-            px: 0.75, py: 0.25,
-            overflow: 'hidden',
-            opacity: showControls ? 1 : 0,
-            pointerEvents: showControls ? 'auto' : 'none',
-            transition: 'opacity 0.25s',
+            position: 'relative', flexShrink: 0,
+            width: isFullscreen ? '100%' : videoSize.w,
+            height: isFullscreen ? '100%' : videoSize.h,
+            cursor: 'pointer',
           }}
         >
-          <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.25, flexShrink: 0 }}>
-            {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
-          </IconButton>
+          <video
+            ref={videoRef}
+            src={src}
+            loop playsInline
+            onLoadedMetadata={handleLoadedMetadata}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          />
+
+          {/* Bottom gradient */}
           <Box sx={{
-            width: showVolume ? 80 : 0,
-            opacity: showVolume ? 1 : 0,
-            ml: showVolume ? 0.5 : 0,
-            pointerEvents: showVolume ? 'auto' : 'none',
-            transition: 'width 0.25s ease, opacity 0.2s ease, margin 0.25s ease',
-            display: 'flex', alignItems: 'center',
-          }}>
-            <Slider
-              value={volume}
-              onChange={handleVolumeSlider}
-              size="small"
-              sx={{
-                width: 72, color: '#fff', p: 0, mx: 0.5, flexShrink: 0,
-                '& .MuiSlider-thumb': { display: 'none' },
-                '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.25)', opacity: 1 },
-                '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff', borderRadius: 2 },
-              }}
-            />
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 56,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
+            pointerEvents: 'none',
+            opacity: showControls ? 1 : 0,
+            transition: 'opacity 0.25s',
+          }} />
+
+          {/* Fullscreen button */}
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+            sx={{
+              position: 'absolute', bottom: 10, right: 10, zIndex: 2,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              color: '#fff', p: 0.5,
+              borderRadius: 2,
+              opacity: showControls ? 1 : 0,
+              pointerEvents: showControls ? 'auto' : 'none',
+              transition: 'opacity 0.25s',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+            }}
+          >
+            {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+          </IconButton>
+
+          {/* Volume pill */}
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => setShowVolume(true)}
+            onMouseLeave={() => setShowVolume(false)}
+            sx={{
+              position: 'absolute', bottom: 10, left: 10, zIndex: 2,
+              display: 'flex', alignItems: 'center',
+              bgcolor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 3,
+              px: 0.75, py: 0.25,
+              overflow: 'hidden',
+              opacity: showControls ? 1 : 0,
+              pointerEvents: showControls ? 'auto' : 'none',
+              transition: 'opacity 0.25s',
+            }}
+          >
+            <IconButton size="small" onClick={toggleMute} sx={{ color: '#fff', p: 0.25, flexShrink: 0 }}>
+              {volume === 0 ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+            </IconButton>
+            <Box sx={{
+              width: showVolume ? 80 : 0,
+              opacity: showVolume ? 1 : 0,
+              ml: showVolume ? 0.5 : 0,
+              pointerEvents: showVolume ? 'auto' : 'none',
+              transition: 'width 0.25s ease, opacity 0.2s ease, margin 0.25s ease',
+              display: 'flex', alignItems: 'center',
+            }}>
+              <Slider
+                value={volume}
+                onChange={handleVolumeSlider}
+                size="small"
+                sx={{
+                  width: 72, color: '#fff', p: 0, mx: 0.5, flexShrink: 0,
+                  '& .MuiSlider-thumb': { display: 'none' },
+                  '& .MuiSlider-rail': { bgcolor: 'rgba(255,255,255,0.25)', opacity: 1 },
+                  '& .MuiSlider-track': { bgcolor: '#fff', borderColor: '#fff', borderRadius: 2 },
+                }}
+              />
+            </Box>
           </Box>
         </Box>
       </Box>
