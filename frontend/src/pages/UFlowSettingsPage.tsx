@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
   Box, Typography, Paper, TextField, Button,
@@ -95,6 +95,9 @@ function UFlowSettingsPage() {
     else { if (bannerInputRef.current) bannerInputRef.current.value = ''; }
   }, [cropMode]);
 
+  if (!localStorage.getItem('vj_token')) {
+    return <Navigate to="/uflow/auth" replace />;
+  }
 
   const saveAll = async () => {
     if (passwordFilled && newPassword !== confirmNewPassword) {

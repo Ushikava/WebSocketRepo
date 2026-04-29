@@ -4,9 +4,7 @@ import pathlib
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 
 from api.router import router as ping_router
 from api.canvas import router as canvas_router
@@ -21,7 +19,6 @@ os.makedirs("uploads/avatars", exist_ok=True)
 os.makedirs("uploads/banners", exist_ok=True)
 
 app = FastAPI(title="Ushikava Backend")
-security = HTTPBasic()
 
 origins = [
     "http://localhost:5173",

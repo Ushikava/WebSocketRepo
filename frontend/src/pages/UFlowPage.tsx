@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 
 import Navbar from '../components/uflow/Navbar';
@@ -77,6 +77,10 @@ function UFlowPage() {
     const url = tab === 'my-likes' ? '/api/uflow/likes' : '/api/uflow/videos';
     fetchFromUrl(url, offset, true);
   }, [loadingVideos, hasMore, fetchFromUrl, offset, tab]);
+
+  if (tab === 'my-likes' && !localStorage.getItem('vj_token')) {
+    return <Navigate to="/uflow/auth" replace />;
+  }
 
   return (
     <Box sx={{ height: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden', pb: { xs: '56px', md: 0 } }}>

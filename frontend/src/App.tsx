@@ -47,13 +47,6 @@ function AppTheme({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  if (!localStorage.getItem('vj_token')) {
-    return <Navigate to="/uflow/auth" replace />;
-  }
-  return <>{children}</>;
-}
-
 function App() {
   return (
     <LanguageProvider>
@@ -64,11 +57,11 @@ function App() {
           <Route path="/canvas" element={<PopupProvider><CanvasPage /></PopupProvider>} />
           <Route path="/uflow" element={<Navigate to="/uflow/for-you" replace />} />
           <Route path="/uflow/auth" element={<UFlowAuthPage />} />
-          <Route path="/uflow/my-likes" element={<RequireAuth><UFlowPage /></RequireAuth>} />
           <Route path="/uflow/:tab" element={<UFlowPage />} />
           <Route path="/uflow/video/:slug" element={<VideoPage />} />
           <Route path="/uflow/user/:username" element={<UFlowProfilePage />} />
-          <Route path="/uflow/settings" element={<RequireAuth><UFlowSettingsPage /></RequireAuth>} />
+          <Route path="/uflow/settings" element={<UFlowSettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppTheme>
     </LanguageProvider>
