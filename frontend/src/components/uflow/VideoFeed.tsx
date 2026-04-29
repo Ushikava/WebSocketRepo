@@ -94,7 +94,7 @@ function FeedItem({ video, index, isActive, volume, onVolumeChange, itemRef, onA
 
       {/* Below-video row: title/author left, actions right */}
       <Box sx={{
-        width: playerW,
+        width: { xs: '100%', md: playerW },
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         mt: 1.5, gap: 1,
       }}>

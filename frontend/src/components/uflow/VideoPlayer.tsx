@@ -168,7 +168,9 @@ function VideoPlayer({
         ref={containerRef}
         sx={{
           position: 'relative', zIndex: 1,
-          width: MAX_W, height: videoSize.h,
+          width: { xs: '100%', md: MAX_W }, maxWidth: MAX_W,
+          height: { xs: 'auto', md: videoSize.h },
+          aspectRatio: { xs: `${videoSize.w} / ${videoSize.h}`, md: 'auto' },
           bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0B0B14' : '#E8E9F5',
           borderRadius: '16px',
           border: '2px solid #333', overflow: 'hidden',
@@ -187,8 +189,8 @@ function VideoPlayer({
           onMouseLeave={handleMouseLeave}
           sx={{
             position: 'relative', flexShrink: 0,
-            width: isFullscreen ? '100%' : videoSize.w,
-            height: isFullscreen ? '100%' : videoSize.h,
+            width: isFullscreen ? '100%' : { xs: '100%', md: videoSize.w },
+            height: isFullscreen ? '100%' : { xs: '100%', md: videoSize.h },
             cursor: 'pointer',
           }}
         >
