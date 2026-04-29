@@ -31,5 +31,6 @@ class VideoLike(Base):
     id = Column(Integer, primary_key=True)
     video_id = Column(Integer, ForeignKey("uploaded_videos.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users_data.id"), nullable=False)
+    liked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("video_id", "user_id", name="uq_video_like"),)

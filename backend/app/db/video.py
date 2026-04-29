@@ -160,7 +160,7 @@ def get_all_liked_video(db: Session, offset: int = 0, limit: int = 20, current_u
         .join(VideoLike, VideoLike.video_id == UploadedVideos.id)
         .join(UserData, UserData.id == UploadedVideos.uploaded_by)
         .where(VideoLike.user_id == current_user)
-        .order_by(UploadedVideos.uploaded_at.desc())
+        .order_by(VideoLike.liked_at.desc())
         .offset(offset).limit(limit).all()
     )
     return [_row_to_dict(v, uname, views, likes, is_liked=True) for v, views, likes, uname in rows]
