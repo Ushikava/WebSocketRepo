@@ -231,6 +231,8 @@ function VideoFeed({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    setSpacerBlocks(1);
+    lastReachedRef.current = false;
   }, [resetKey]);
 
   useEffect(() => {
@@ -248,34 +250,30 @@ function VideoFeed({
     return () => obs.disconnect();
   }, [videos.length, hasMore, onLoadMore]);
 
-  if (loading && videos.length === 0) {
-    return (
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-        <CircularProgress sx={{ color: '#7C3AED' }} />
-      </Box>
-    );
-  }
-
-  if (!loading && videos.length === 0) {
-    return (
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, bgcolor: 'background.default' }}>
-        <VideoLibraryIcon sx={{ fontSize: 64, color: '#ccc' }} />
-        <Typography color="text.secondary">{t('noVideosYet')}</Typography>
-        <Button variant="contained" onClick={onUploadClick}
-          sx={{ background: 'linear-gradient(135deg, #7C3AED, #3B82F6)', borderRadius: 3, textTransform: 'none' }}
-        >
-          {t('uploadFirstVideo')}
-        </Button>
-      </Box>
-    );
-  }
-
   return (
     <Box
       ref={scrollRef}
       onScroll={handleScroll}
       sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', bgcolor: 'background.default' }}
     >
+      {loading && videos.length === 0 && (
+        <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CircularProgress sx={{ color: '#7C3AED' }} />
+        </Box>
+      )}
+
+      {!loading && videos.length === 0 && (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+          <VideoLibraryIcon sx={{ fontSize: 64, color: '#ccc' }} />
+          <Typography color="text.secondary">{t('noVideosYet')}</Typography>
+          <Button variant="contained" onClick={onUploadClick}
+            sx={{ background: 'linear-gradient(135deg, #7C3AED, #3B82F6)', borderRadius: 3, textTransform: 'none' }}
+          >
+            {t('uploadFirstVideo')}
+          </Button>
+        </Box>
+      )}
+
       {videos.map((v, i) => (
         <FeedItem
           key={v.id}
@@ -290,6 +288,7 @@ function VideoFeed({
           onFullscreenChange={handleFullscreenChange}
         />
       ))}
+
       {videos.length > 0 && Array.from({ length: spacerBlocks }, (_, i) => (
         <Box
           key={i}
@@ -303,7 +302,8 @@ function VideoFeed({
           )}
         </Box>
       ))}
-      {loading && (
+
+      {loading && videos.length > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress size={28} sx={{ color: '#7C3AED' }} />
         </Box>
