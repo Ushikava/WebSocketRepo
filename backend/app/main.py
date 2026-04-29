@@ -17,6 +17,8 @@ UPLOADS_DIR = "uploads"
 VIDEOS_DIR = "videos"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(VIDEOS_DIR, exist_ok=True)
+os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads/banners", exist_ok=True)
 
 app = FastAPI(title="Ushikava Backend")
 security = HTTPBasic()
@@ -39,7 +41,10 @@ app.include_router(canvas_router, prefix="/api")
 app.include_router(uflow_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 
+
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/avatars", StaticFiles(directory="uploads/avatars"), name="avatars")
+app.mount("/banners", StaticFiles(directory="uploads/banners"), name="banners")
 app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="videos")
 DIST_DIR = pathlib.Path(__file__).parent.parent.parent / "frontend" / "dist"
 

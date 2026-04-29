@@ -12,6 +12,8 @@ class UserData(Base):
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=True)
     hashed_password = Column(Text, nullable=False)
+    avatar_url = Column(String, nullable=True)
+    banner_url = Column(String, nullable=True)
 
 
 class RefreshToken(Base):

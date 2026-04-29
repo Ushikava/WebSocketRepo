@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Button, IconButton, InputBase,
@@ -30,7 +30,29 @@ function Navbar({ onUploadClick }: NavbarProps) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('vj_avatar_url') || '');
   const { lang, setLang, t, darkMode, setDarkMode } = useLanguage();
+
+  useEffect(() => {
+    if (!isLoggedIn || !username) return;
+    fetch(`/api/uflow/user/${username}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const raw = data?.avatar_url ?? '';
+        if (raw) {
+          // Keep existing cache-busted URL from localStorage if it points to the same file
+          const stored = localStorage.getItem('vj_avatar_url') ?? '';
+          const storedBase = stored.split('?')[0];
+          const finalUrl = storedBase === raw ? stored : `${raw}?t=${Date.now()}`;
+          setAvatarUrl(finalUrl);
+          localStorage.setItem('vj_avatar_url', finalUrl);
+        } else {
+          setAvatarUrl('');
+          localStorage.removeItem('vj_avatar_url');
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn, username]);
 
   const handleUploadClick = () => {
     if (!isLoggedIn) { setAuthPromptOpen(true); return; }
@@ -50,6 +72,8 @@ function Navbar({ onUploadClick }: NavbarProps) {
     localStorage.removeItem('vj_token');
     localStorage.removeItem('vj_refresh_token');
     localStorage.removeItem('vj_username');
+    localStorage.removeItem('vj_avatar_url');
+    localStorage.removeItem('vj_banner_url');
     navigate('/uflow/auth');
   };
 
@@ -148,16 +172,17 @@ function Navbar({ onUploadClick }: NavbarProps) {
             <>
               <Tooltip title={username}>
                 <Avatar
+                  src={avatarUrl || undefined}
                   onClick={e => setUserMenuAnchor(e.currentTarget)}
                   sx={{
                     width: 36, height: 36,
                     background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
                     fontSize: 14, fontWeight: 'bold',
-                    border: 2, borderColor: 'divider',
+                    border: 1, borderColor: 'divider',
                     cursor: 'pointer',
                   }}
                 >
-                  {username[0]?.toUpperCase()}
+                  {!avatarUrl && username[0]?.toUpperCase()}
                 </Avatar>
               </Tooltip>
 
@@ -167,9 +192,10 @@ function Navbar({ onUploadClick }: NavbarProps) {
                 onClose={() => setUserMenuAnchor(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                disableAutoFocusItem
                 slotProps={{ paper: { sx: { borderRadius: 3, mt: 1, minWidth: 180 } } }}
               >
-                <MenuItem onClick={() => { setUserMenuAnchor(null); handleProfilePage(); }} sx={{ color: '#ffffff' }}>
+                <MenuItem onClick={() => { setUserMenuAnchor(null); handleProfilePage(); }}>
                   <ListItemIcon><PersonOutlineIcon fontSize="small" /></ListItemIcon>
                   <ListItemText primary={t('profile')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
@@ -177,7 +203,7 @@ function Navbar({ onUploadClick }: NavbarProps) {
                   <ListItemIcon><VideoLibraryIcon fontSize="small" /></ListItemIcon>
                   <ListItemText primary={t('myVideos')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>
-                <MenuItem onClick={() => setUserMenuAnchor(null)} disabled>
+                <MenuItem onClick={() => { setUserMenuAnchor(null); navigate('/uflow/settings'); }}>
                   <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
                   <ListItemText primary={t('settings')} slotProps={{ primary: { sx: { fontSize: 14 } } }} />
                 </MenuItem>

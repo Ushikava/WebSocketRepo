@@ -31,6 +31,7 @@ const en = {
   uploadFirstVideo: 'Upload first video',
   videoNotFound: 'Video not found',
   loadMore: 'Load more',
+  noMoreVideos: 'No more videos, but you can always upload a new one!',
 
   // UFlowProfilePage
   userNotFound: 'User not found',
@@ -52,6 +53,20 @@ const en = {
   settingsTitle: 'Settings',
   languageLabel: 'Language',
   darkModeLabel: 'Dark mode',
+
+  // UFlowSettingsPage
+  profileSettings: 'Profile Settings',
+  settingsProfileImages: 'Profile Images',
+  settingsAvatar: 'Avatar',
+  settingsBanner: 'Profile Banner',
+  settingsAccount: 'Account',
+  settingsNewUsername: 'New username',
+  settingsPassword: 'Change Password',
+  settingsCurrentPassword: 'Current password',
+  settingsNewPassword: 'New password',
+  settingsSave: 'Save',
+  settingsSaved: 'Saved!',
+  settingsClickToChange: 'Click to change',
 
   // VideoAuthPage
   loginTab: 'Sign In',

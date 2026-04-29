@@ -166,7 +166,11 @@ def get_all_liked_video(db: Session, offset: int = 0, limit: int = 20, current_u
     return [_row_to_dict(v, uname, views, likes, is_liked=True) for v, views, likes, uname in rows]
 
 
-def get_user_info(db: Session, username: str, current_user: int = None) -> dict:
+def get_user_info(db: Session, username: str, current_user: int = None) -> dict | None:
+    user = db.query(UserData).filter(UserData.username == username).first()
+    if not user:
+        return None
+
     stats = (
         db.query(func.sum(VideoStats.views).label("total_views"),
                  func.sum(VideoStats.likes).label("total_likes"),
@@ -179,7 +183,20 @@ def get_user_info(db: Session, username: str, current_user: int = None) -> dict:
 
     return {
         "username": username,
-        "video_count": stats.video_count,
-        "total_views": stats.total_views,
-        "total_likes": stats.total_likes
-        }
+        "video_count": stats.video_count if stats else 0,
+        "total_views": stats.total_views or 0 if stats else 0,
+        "total_likes": stats.total_likes or 0 if stats else 0,
+        "avatar_url": user.avatar_url,
+        "banner_url": user.banner_url,
+    }
+
+
+def upload_avatar(db: Session, url: str, uploaded_by: int) -> None:
+    db.query(UserData).filter(UserData.id == uploaded_by).update({"avatar_url": url})
+    db.commit()
+
+
+def upload_banner(db: Session, url: str, uploaded_by: int) -> None:
+    db.query(UserData).filter(UserData.id == uploaded_by).update({"banner_url": url})
+    db.commit()
+

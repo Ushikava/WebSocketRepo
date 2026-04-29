@@ -33,6 +33,7 @@ const ru: Record<TranslationKeys, string> = {
   uploadFirstVideo: 'Загрузить первое видео',
   videoNotFound: 'Видео не найдено',
   loadMore: 'Загрузить ещё',
+  noMoreVideos: 'Видео закончились, но вы всегда можете добавить новое!',
 
   // UFlowProfilePage
   userNotFound: 'Пользователь не найден',
@@ -54,6 +55,20 @@ const ru: Record<TranslationKeys, string> = {
   settingsTitle: 'Настройки',
   languageLabel: 'Язык',
   darkModeLabel: 'Тёмная тема',
+
+  // UFlowSettingsPage
+  profileSettings: 'Настройки профиля',
+  settingsProfileImages: 'Изображения профиля',
+  settingsAvatar: 'Аватар',
+  settingsBanner: 'Баннер профиля',
+  settingsAccount: 'Аккаунт',
+  settingsNewUsername: 'Новый никнейм',
+  settingsPassword: 'Смена пароля',
+  settingsCurrentPassword: 'Текущий пароль',
+  settingsNewPassword: 'Новый пароль',
+  settingsSave: 'Сохранить',
+  settingsSaved: 'Сохранено!',
+  settingsClickToChange: 'Нажмите для изменения',
 
   // VideoAuthPage
   loginTab: 'Войти',

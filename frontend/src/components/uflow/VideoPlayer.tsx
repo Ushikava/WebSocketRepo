@@ -30,7 +30,7 @@ function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevVolumeRef = useRef(volume || 70);
+  const prevVolumeRef = useRef(volume || 50);
   const savedScrollRef = useRef<{ el: Element; top: number }[]>([]);
   const isFullscreenRef = useRef(false);
 
@@ -260,7 +260,7 @@ function VideoPlayer({
               <Slider
                 value={volume}
                 onChange={handleVolumeSlider}
-                size="small"
+                //size="small"
                 sx={{
                   width: 72, color: '#fff', p: 0, mx: 0.5, flexShrink: 0,
                   '& .MuiSlider-thumb': { display: 'none' },

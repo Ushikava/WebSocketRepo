@@ -294,8 +294,14 @@ function VideoFeed({
         <Box
           key={i}
           ref={i === spacerBlocks - 1 ? lastSpacerRef : undefined}
-          sx={{ height: '80vh', flexShrink: 0 }}
-        />
+          sx={{ height: '80vh', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 6 }}
+        >
+          {i === 0 && (
+            <Typography fontSize={22} color="text.disabled" textAlign="center" px={2}>
+              {t('noMoreVideos')}
+            </Typography>
+          )}
+        </Box>
       ))}
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
