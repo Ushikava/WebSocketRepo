@@ -106,7 +106,14 @@ function FeedItem({ video, index, isActive, volume, onVolumeChange, itemRef, onA
           >
             {video.title}
           </Typography>
-          <Typography fontSize={12} color="text.secondary">@{video.uploaded_by}</Typography>
+          <Typography 
+            fontSize={12} 
+            color="text.secondary"
+            onClick={() => navigate(`/uflow/user/${video.uploaded_by}`)}
+            sx={{ cursor: 'pointer', '&:hover': { color: '#8c6ac9', textDecoration: 'underline' } }}
+          >
+              @{video.uploaded_by}
+          </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
